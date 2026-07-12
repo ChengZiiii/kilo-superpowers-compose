@@ -11,7 +11,7 @@
 
 ## Status
 
-**v0.1.1.** Installed via the npm CLI and verified on both **Kilo CLI** and the
+**v0.1.2.** Installed via the npm CLI and verified on both **Kilo CLI** and the
 **VS Code Kilo Code** extension (they share the same config, so one install
 covers both).
 
@@ -33,14 +33,31 @@ the full, disciplined Superpowers workflow on any coding task.
 
 ## Installation
 
+> ⚠ **必须跑两步。** 只跑第一步 `npm install -g` 不会有任何效果——它只安装 CLI 工具，
+> 不会创建 agent/命令文件、不会建技能链接、不会改 `kilo.jsonc`。漏跑第二步是最常见的坑。
+
+**Step ① — 安装 CLI**：
+
 ```bash
 npm install -g kilo-superpowers-compose
+```
+
+只安装 CLI 工具（`kilo-superpowers-compose` 命令本身），不动你的配置目录。
+
+**Step ② — 安装到 Kilo**：
+
+```bash
 kilo-superpowers-compose install
 ```
 
-Then restart Kilo. You'll see `compose` in `/agents` and `/superpowers` will
-work. One install covers both Kilo CLI and the VS Code Kilo Code extension
-(they share `~/.config/kilo/`).
+把 3 个 agent 文件复制到 `~/.config/kilo/agent/`、命令复制到
+`~/.config/kilo/commands/`、建技能链接到 `~/.kilo/skills/superpowers`、
+在 `kilo.jsonc` 的 `skills.paths` 加条目。**幂等**：重复跑安全。
+
+**Step ③ — 重启 Kilo**（CLI 完全退出重开；VS Code `Reload Window`）。
+
+之后 `/agents` 里出现 `compose`，`/superpowers` 命令可用。一次安装同时覆盖
+Kilo CLI 和 VS Code Kilo Code 扩展（共享 `~/.config/kilo/`）。
 
 ### Kilo Marketplace (official channel — coming soon)
 
@@ -66,24 +83,42 @@ Until then, use the npm install above.
 
 ## Update & uninstall
 
-```bash
-# Update (re-runs install, idempotent)
-kilo-superpowers-compose update
+> **更新也是两步**：`npm update -g` 升级包本身，`update` 子命令把产物重同步到
+> Kilo 配置目录。只跑第一步不会改你的 agent/命令/技能链接。
 
-# Remove everything this package installed (manifest-based; never touches your own files)
-kilo-superpowers-compose uninstall
-```
-
-After bumping the upstream package:
+**Update**（两步，发布新版本后跑）：
 
 ```bash
-npm update -g kilo-superpowers-compose
-kilo-superpowers-compose update
+npm update -g kilo-superpowers-compose   # ① 升级包本身
+kilo-superpowers-compose update         # ② 重同步产物到 Kilo（幂等）
 ```
 
-Uninstall removes: the skills link, the 3 agent files, the `superpowers.md`
-command, the package's `skills.paths` entry in `kilo.jsonc`, and the install
-manifest. Your own skills, agents, and config are left untouched.
+只重跑 `kilo-superpowers-compose update`（不带 npm update）也行——它会用当前全局
+包的版本刷新产物，但不会拉取新版本。
+
+**Uninstall**（清掉本包所有产物，清单法，不动你自有的文件）：
+
+```bash
+kilo-superpowers-compose uninstall       # 清产物
+npm uninstall -g kilo-superpowers-compose  # 卸 CLI 本身
+```
+
+Uninstall 移除：技能链接、3 个 agent 文件、`superpowers.md` 命令、
+`kilo.jsonc` 中本包的 `skills.paths` 条目、安装清单。你自己的技能、代理、配置
+一律不动。
+
+## Common mistakes
+
+**"我跑完 `npm install -g` 了但 `/agents` 里没有 compose。"**
+——只跑了第一步。CLI 装上了，但 agent 文件、技能链接、命令都没落地。再跑一次
+`kilo-superpowers-compose install`。
+
+**"装好后改了包代码，重启 Kilo 没生效。"**
+——`~/.kilo/skills/superpowers` 是指向包目录的 junction，包升级后会自动指向新内容。
+但 agent/命令文件是安装时复制的，不会自动跟新。需要跑 `kilo-superpowers-compose update`。
+
+**"我在 `kilo.jsonc` 加了 `plugin: ['kilo-superpowers-compose']`。"**
+——删掉。当前 Kilo 不会加载这个字段，只会拖慢启动。本包走 npm CLI 安装，不需要这个字段。
 
 ## CLI usage
 

@@ -368,6 +368,8 @@ export function runInstall(opts = {}) {
   console.log(`  kilo.jsonc: skills.paths ${added ? '已新增条目' : '已存在（幂等跳过）'}`);
   console.log('');
   console.log('  请重启 Kilo CLI / VS Code 扩展以加载。');
+  console.log('');
+  console.log('  💡 以后包升级：npm update -g kilo-superpowers-compose && kilo-superpowers-compose update');
   return EXIT.OK;
 }
 

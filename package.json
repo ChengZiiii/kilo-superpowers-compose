@@ -1,6 +1,6 @@
 {
   "name": "kilo-superpowers-compose",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "将 obra/superpowers 工作流打包为 Kilo 插件：一个 compose 编排器代理、/superpowers 斜杠命令与 14 个技能，一条命令安装。",
   "keywords": [
     "kilo",
