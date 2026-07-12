@@ -244,6 +244,61 @@ test('幂等：重复 install 不产生重复 skills.paths 条目', () => {
 });
 
 // ─── 卸载保留用户自有文件 ─────────────────────────────────────────────
+// ─── install / update 路径也清理 v0.1.3 之前版本残留的 /superpowers 命令副本 ─
+test('install: 清理从老版本残留的 ~/.config/kilo/commands/superpowers.md', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    // 模拟老版本留下的命令副本
+    const cmdsDir = path.join(ctx.configDir, 'commands');
+    fs.mkdirSync(cmdsDir, { recursive: true });
+    const legacy = path.join(cmdsDir, 'superpowers.md');
+    fs.writeFileSync(legacy, '# legacy /superpowers\n', 'utf8');
+    assert.ok(fs.existsSync(legacy));
+
+    // 单次 install 就应顺手清掉这个残留文件
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    assert.ok(!fs.existsSync(legacy), '残留的 /superpowers 命令副本应被 install 清理');
+  } finally {
+    rmrf(home);
+  }
+});
+
+test('update: 清理从老版本残留的 ~/.config/kilo/commands/superpowers.md', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    // 模拟老版本留下的命令副本（uninstall → install 间残留）
+    const cmdsDir = path.join(ctx.configDir, 'commands');
+    fs.mkdirSync(cmdsDir, { recursive: true });
+    const legacy = path.join(cmdsDir, 'superpowers.md');
+    fs.writeFileSync(legacy, '# legacy /superpowers\n', 'utf8');
+
+    assert.equal(lib.runUpdate({ context: ctx }), EXIT.OK);
+    assert.ok(!fs.existsSync(legacy), 'update 路径也应清理残留');
+  } finally {
+    rmrf(home);
+  }
+});
+
+test('install: 二次 install 在遗留文件已被清理后保持幂等（不重新安装命令）', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    // 第一次 install（无遗留命令）只是建立 manifest / agents / 链接
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    // 验证不再写 /superpowers.md 命令副本
+    const cmdFile = path.join(ctx.configDir, 'commands', 'superpowers.md');
+    assert.ok(!fs.existsSync(cmdFile), 'install 不应再向 commands/ 写任何文件');
+
+    // 第二次 install 仍应保持干净
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    assert.ok(!fs.existsSync(cmdFile), '二次 install 也应保持 commands/ 干净');
+  } finally {
+    rmrf(home);
+  }
+});
+
 // ─── 卸载清理从 v0.1.3 之前的版本残留的 /superpowers 命令副本 ────────
 test('卸载：清理从老版本残留的 ~/.config/kilo/commands/superpowers.md', () => {
   const home = mkTempHome();

@@ -11,7 +11,7 @@
 
 ## Status
 
-**v0.1.4.** Installed via the npm CLI and verified on both **Kilo CLI** and the
+**v0.1.5.** Installed via the npm CLI and verified on both **Kilo CLI** and the
 **VS Code Kilo Code** extension (they share the same config, so one install
 covers both).
 

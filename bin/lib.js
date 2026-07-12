@@ -259,6 +259,16 @@ export function runInstall(opts = {}) {
     }
   }
 
+  // 1.5 兜底清理：v0.1.3 之前的版本曾向 ~/.config/kilo/commands/superpowers.md
+  //     写入 /superpowers 斜杠命令副本（已随 v0.1.3 停止分发）。老用户机器上若
+  //     残留该文件，install / update 路径上都主动删掉它，消除 Kilo 命令面板里的
+  //     幽灵条目。该清理与 uninstall 路径共用的 safeRemove 幂等安全。
+  const legacyCmdInInstall = path.join(ctx.configDir, 'commands', 'superpowers.md');
+  let legacyRemovedOnInstall = false;
+  if (linkExists(legacyCmdInInstall)) {
+    legacyRemovedOnInstall = safeRemove(legacyCmdInInstall, { dryRun, log });
+  }
+
   // 2. 备份 kilo.jsonc
   const bak = backupConfig(ctx.configFile, { dryRun, log });
 
@@ -344,6 +354,9 @@ export function runInstall(opts = {}) {
   }
   console.log(`  代理: ${agentFiles.map((f) => f.name).join(', ') || '(无)'}`);
   console.log(`  kilo.jsonc: skills.paths ${added ? '已新增条目' : '已存在（幂等跳过）'}`);
+  if (legacyRemovedOnInstall) {
+    console.log(`  遗留命令: 已移除 ~/.config/kilo/commands/superpowers.md（来自 v0.1.3 之前版本）`);
+  }
   console.log('');
   console.log('  请重启 Kilo CLI / VS Code 扩展以加载。');
   console.log('');
