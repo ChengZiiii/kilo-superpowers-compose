@@ -24,19 +24,20 @@ covers both).
 ## What it is
 
 `kilo-superpowers-compose` bundles 14 battle-tested Superpowers skills + 3
-purpose-built agents + a `/superpowers` slash command into one npm package.
+purpose-built agents into one npm package.
 Run one install command and the skills link into `~/.kilo/skills/`, the agent
-files copy into `~/.config/kilo/agent/`, the command into
-`~/.config/kilo/commands/`, and `kilo.jsonc` gets the skill path registered.
-Restart Kilo and a `compose` agent appears in the agent picker, ready to run
-the full, disciplined Superpowers workflow on any coding task.
+files copy into `~/.config/kilo/agent/`, and `kilo.jsonc` gets the skill path
+registered. Restart Kilo and a `compose` agent appears in the agent picker.
+Pick `compose` and the full, disciplined Superpowers workflow runs on any
+coding task — no extra slash command required (this matches the mimo-compose
+convention).
 
 ## Installation
 
 > ⚠ **Two steps required.** Running only step ① (`npm install -g`) does
-> nothing visible — it only installs the CLI binary, not the agent/command
-> files, the skills link, or `kilo.jsonc`. Skipping step ② is the most
-> common mistake.
+> nothing visible — it only installs the CLI binary, not the agent files,
+> the skills link, or `kilo.jsonc`. Skipping step ② is the most common
+> mistake.
 
 **Step ① — Install the CLI**:
 
@@ -53,17 +54,16 @@ itself); does not touch your config directory.
 kilo-superpowers-compose install
 ```
 
-Copies the 3 agent files to `~/.config/kilo/agent/`, the command to
-`~/.config/kilo/commands/`, creates the skills link at
-`~/.kilo/skills/superpowers`, and adds an entry to `kilo.jsonc`'s
+Copies the 3 agent files to `~/.config/kilo/agent/`, creates the skills
+link at `~/.kilo/skills/superpowers`, and adds an entry to `kilo.jsonc`'s
 `skills.paths`. **Idempotent**: safe to re-run.
 
 **Step ③ — Restart Kilo** (fully quit and reopen the CLI; **Reload Window**
 in VS Code).
 
-After this, `compose` appears in `/agents` and `/superpowers` works. One
-install covers both Kilo CLI and the VS Code Kilo Code extension (they
-share `~/.config/kilo/`).
+After this, `compose` appears in the agent picker — pick it to enter the
+Superpowers workflow. One install covers both Kilo CLI and the VS Code
+Kilo Code extension (they share `~/.config/kilo/`).
 
 ### Kilo Marketplace (official channel — coming soon)
 
@@ -84,14 +84,17 @@ Until then, use the npm install above.
   `writing-skills`.
 - **3 agents**: `compose` (primary orchestrator), `compose-dev` (TDD
   implementer subagent), `compose-review` (two-stage reviewer subagent). None
-  pin a `model` — they use your global default model.
-- **1 slash command**: `/superpowers` (routes to `compose`).
+  pin a `model` — they use your global default model. Pick `compose` in the
+  agent picker to enter the Superpowers workflow.
+
+> v0.1.x 早期版本同时注册了 `/superpowers` 斜杠命令；自 v0.1.3 起移除以与
+> mimo-compose 保持一致——选 `compose` 代理即可触发完整工作流，不再占用命令面板。
 
 ## Update & uninstall
 
 > **Update is also two steps.** `npm update -g` upgrades the package
 > itself; the `update` subcommand re-syncs the artifacts to Kilo's config.
-> Running only step ① won't update your agents/commands/skills link.
+> Running only step ① won't update your agents / skills link.
 
 **Update** (two steps, after a new version is published):
 
@@ -112,21 +115,20 @@ kilo-superpowers-compose uninstall       # remove artifacts
 npm uninstall -g kilo-superpowers-compose  # remove the CLI itself
 ```
 
-Uninstall removes: the skills link, the 3 agent files, the
-`superpowers.md` command, this package's `skills.paths` entry in
-`kilo.jsonc`, and the install manifest. Your own skills, agents, and config
-are left untouched.
+Uninstall removes: the skills link, the 3 agent files, this package's
+`skills.paths` entry in `kilo.jsonc`, and the install manifest. Your own
+skills, agents, and config are left untouched.
 
 ## Common mistakes
 
-**"I ran `npm install -g` but `/agents` doesn't show `compose`."**
-— You only ran step ①. The CLI is installed, but no agent files, skills
-link, or command were created. Run `kilo-superpowers-compose install`.
+**"I ran `npm install -g` but the agent picker doesn't show `compose`."**
+— You only ran step ①. The CLI is installed, but no agent files or skills
+link were created. Run `kilo-superpowers-compose install`.
 
 **"I changed package code after install; restarting Kilo doesn't pick it up."**
 — `~/.kilo/skills/superpowers` is a junction pointing to the package
 directory, so package upgrades are picked up automatically. But
-agent/command files were copied at install time and don't auto-update. Run
+agent files were copied at install time and don't auto-update. Run
 `kilo-superpowers-compose update`.
 
 **"I added `plugin: ['kilo-superpowers-compose']` to `kilo.jsonc`."**
@@ -139,7 +141,7 @@ This package installs via the npm CLI — no `plugin` field needed.
 kilo-superpowers-compose <command>
 
 Commands:
-  install     Install skills, agents, and the slash command (default)
+  install     Install skills and agents (default)
   uninstall   Remove everything this package installed (manifest-based)
   update      Re-run install (idempotent)
 

@@ -160,10 +160,9 @@ test('runInstall: DRY_RUN 不创建任何文件', () => {
     const ctx = ctxFor(home, { KILO_SUPERPOWERS_DRY_RUN: '1' });
     const code = lib.runInstall({ context: ctx });
     assert.equal(code, EXIT.OK);
-    // 不应创建 skill 链接 / agents / commands / manifest
+    // 不应创建 skill 链接 / agents / manifest
     assert.ok(!fs.existsSync(ctx.skillLink));
     assert.ok(!fs.existsSync(path.join(ctx.agentsDir, 'compose.md')));
-    assert.ok(!fs.existsSync(path.join(ctx.commandsDir, 'superpowers.md')));
     assert.ok(!fs.existsSync(ctx.manifestFile));
     assert.ok(!fs.existsSync(ctx.configFile));
   } finally {
@@ -208,7 +207,6 @@ test('往返：install 后 uninstall 应净空本包产物', () => {
     // 安装产物存在
     assert.ok(fs.existsSync(ctx.skillLink));
     assert.ok(fs.existsSync(path.join(ctx.agentsDir, 'compose.md')));
-    assert.ok(fs.existsSync(path.join(ctx.commandsDir, 'superpowers.md')));
     assert.ok(fs.existsSync(ctx.manifestFile));
     const cfg = lib.readJsonc(ctx.configFile);
     assert.ok(lib.skillsPathsContains(cfg.skills.paths, ctx.skillLink.replace(/superpowers$/, '')) || cfg.skills.paths.length === 1);
@@ -221,7 +219,6 @@ test('往返：install 后 uninstall 应净空本包产物', () => {
     assert.ok(!fs.existsSync(path.join(ctx.agentsDir, 'compose.md')));
     assert.ok(!fs.existsSync(path.join(ctx.agentsDir, 'compose-dev.md')));
     assert.ok(!fs.existsSync(path.join(ctx.agentsDir, 'compose-review.md')));
-    assert.ok(!fs.existsSync(path.join(ctx.commandsDir, 'superpowers.md')));
     assert.ok(!fs.existsSync(ctx.manifestFile));
 
     // kilo.jsonc 中本包条目被移除

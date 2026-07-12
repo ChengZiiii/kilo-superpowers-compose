@@ -32,7 +32,7 @@ if (cmd === '--help' || cmd === '-h') {
       '  kilo-superpowers-compose <command>',
       '',
       '命令:',
-      '  install     安装技能、代理与斜杠命令（默认）',
+      '  install     安装技能与代理（默认）',
       '  uninstall   移除本包安装的全部内容（清单法，不触碰用户自有文件）',
       '  update      重新运行安装（幂等）',
       '',

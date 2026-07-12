@@ -52,7 +52,6 @@ export function resolvePaths(home) {
     configDir,
     configFile: path.join(configDir, 'kilo.jsonc'),
     agentsDir: path.join(configDir, 'agent'),
-    commandsDir: path.join(configDir, 'commands'),
     skillsDir,
     skillLink: path.join(skillsDir, 'superpowers'),
     manifestFile: path.join(configDir, MANIFEST_NAME),
@@ -237,7 +236,6 @@ export function runInstall(opts = {}) {
 
   const srcSkills = path.join(root, 'skills');
   const srcAgents = path.join(root, 'agents');
-  const srcCommands = path.join(root, 'commands');
 
   let pkg;
   try {
@@ -252,7 +250,7 @@ export function runInstall(opts = {}) {
   log('config dir', ctx.configDir);
 
   // 1. 确保目标目录
-  for (const d of [ctx.configDir, ctx.agentsDir, ctx.commandsDir, ctx.skillsDir]) {
+  for (const d of [ctx.configDir, ctx.agentsDir, ctx.skillsDir]) {
     try {
       ensureDir(d, { dryRun, log });
     } catch (e) {
@@ -310,25 +308,7 @@ export function runInstall(opts = {}) {
     installedAgentPaths.push(dst);
   }
 
-  // 6. 复制 commands
-  const cmdFiles = listMdFiles(srcCommands);
-  const installedCommandPaths = [];
-  for (const f of cmdFiles) {
-    const dst = path.join(ctx.commandsDir, f.name);
-    log('copy command', f.abs, '->', dst);
-    if (!dryRun) {
-      try {
-        fs.mkdirSync(ctx.commandsDir, { recursive: true });
-        fs.copyFileSync(f.abs, dst);
-      } catch (e) {
-        console.error(`✗ 复制 command 失败 ${f.name}: ${e.message}`);
-        return EXIT.NOT_WRITABLE;
-      }
-    }
-    installedCommandPaths.push(dst);
-  }
-
-  // 7. 追加 skills.paths（config 已在第 3 步解析校验通过）
+  // 6. 追加 skills.paths（config 已在第 3 步解析校验通过）
   config.skills = config.skills || {};
   config.skills.paths = config.skills.paths || [];
   let added = false;
@@ -351,7 +331,6 @@ export function runInstall(opts = {}) {
       skillsLinkType: linkRes.type,
       skillsPathsEntry: srcSkills,
       agents: installedAgentPaths,
-      commands: installedCommandPaths,
     },
     { dryRun, log }
   );
@@ -364,7 +343,6 @@ export function runInstall(opts = {}) {
     console.log(`  注意: 链接创建失败，已回退为递归复制（${linkRes.fallback}）`);
   }
   console.log(`  代理: ${agentFiles.map((f) => f.name).join(', ') || '(无)'}`);
-  console.log(`  命令: /${cmdFiles.map((f) => f.name.replace(/\.md$/, '')).join(', /') || '(无)'}`);
   console.log(`  kilo.jsonc: skills.paths ${added ? '已新增条目' : '已存在（幂等跳过）'}`);
   console.log('');
   console.log('  请重启 Kilo CLI / VS Code 扩展以加载。');
@@ -408,21 +386,12 @@ export function runUninstall(opts = {}) {
   }
   for (const p of agentPaths) safeRemove(p, { dryRun, log });
 
-  // 2. 移除 commands
-  const cmdPaths = (manifest && manifest.commands) || [];
-  if (cmdPaths.length === 0) {
-    for (const n of ['superpowers.md']) {
-      cmdPaths.push(path.join(ctx.commandsDir, n));
-    }
-  }
-  for (const p of cmdPaths) safeRemove(p, { dryRun, log });
-
-  // 3. 移除技能链接（清单有记录类型则用之，否则按链接处理）
+  // 2. 移除技能链接（清单有记录类型则用之，否则按链接处理）
   if (linkExists(ctx.skillLink)) {
     safeRemove(ctx.skillLink, { dryRun, log });
   }
 
-  // 4. 从 kilo.jsonc 移除本包的 skills.paths 条目
+  // 3. 从 kilo.jsonc 移除本包的 skills.paths 条目
   const config = readJsonc(ctx.configFile);
   if (config.__parseError) {
     if (bak && !dryRun) {
@@ -459,7 +428,6 @@ export function runUninstall(opts = {}) {
 
   console.log('✓ kilo-superpowers-compose 已卸载');
   console.log(`  agents: ${agentPaths.length} 个文件`);
-  console.log(`  commands: ${cmdPaths.length} 个文件`);
   console.log(`  技能链接: ${ctx.skillLink}`);
   console.log(`  kilo.jsonc: skills.paths 移除 ${removedEntries} 条`);
   console.log('  未触碰用户自有的技能 / 代理 / 配置。');

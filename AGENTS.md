@@ -12,8 +12,9 @@
 
 本仓库处于**已实现 / 待发布**阶段（DESIGN.md 的 P2–P5）。当前已有：
 `package.json`、`bin/`（安装器）、`skills/`（14 个内嵌技能）、`agents/`（3 个代理）、
-`commands/`（`/superpowers`）、`test/`（node:test 零依赖测试）、`LICENSE`、`NOTICE`，
-以及锁定设计的 `docs/`。
+`test/`（node:test 零依赖测试）、`LICENSE`、`NOTICE`，以及锁定设计的 `docs/`。
+自 v0.1.3 起移除了曾经的 `commands/superpowers.md` 斜杠命令——用户通过代理
+选择器中的 `compose` 代理直接进入工作流。
 
 - **运行测试**：`node --test`（零依赖，使用临时 `KILO_HOME`，不触碰真实配置）。
 - **检视发布包**：`npm pack`。
@@ -50,10 +51,11 @@
 
 一个 Kilo 插件包（`kilo-superpowers-compose`，npm），打包来自
 [obra/superpowers](https://github.com/obra/superpowers) 的 14 个技能，外加 3
-个代理（`compose` 编排器、`compose-dev` 实现者、`compose-review` 评审者）以及一个
-`/superpowers` 斜杠命令。一次安装 → Kilo 代理选择器中出现 `compose` 代理，驱动完整的
-Superpowers 工作流。外形与命名借鉴自
-[moyu-by/opencode-mimo-compose](https://github.com/moyu-by/opencode-mimo-compose)。
+个代理（`compose` 编排器、`compose-dev` 实现者、`compose-review` 评审者）。
+一次安装 → Kilo 代理选择器中出现 `compose` 代理，用户在代理选择器中选取
+`compose` 即可驱动完整的 Superpowers 工作流。外形与命名借鉴自
+[moyu-by/opencode-mimo-compose](https://github.com/moyu-by/opencode-mimo-compose)，
+刻意不在用户命令面板中注册额外的斜杠命令。
 
 ## 实现的硬性约束（已决定 —— 不要随意更改）
 
@@ -82,7 +84,7 @@ Superpowers 工作流。外形与命名借鉴自
 | 主代理 | `compose`（`mode: primary`） |
 | 子代理 —— 实现者 | `compose-dev`（`mode: subagent`） |
 | 子代理 —— 评审者 | `compose-review`（`mode: subagent`） |
-| 斜杠命令 | `/superpowers` |
+| 斜杠命令 | （无 —— 用户通过 `compose` 代理进入工作流） |
 | 安装的技能目录 | `superpowers`（单个 junction） |
 
 安装器环境变量：`KILO_HOME`、`KILO_SUPERPOWERS_PREFIX=1`（给技能名加前缀以避免冲突）、

@@ -38,12 +38,11 @@ Environment variables (all optional):
 
 1. **Locate this package's resources**
    - Find `package.json` of `kilo-superpowers-compose`
-   - Resolve `skills/`, `agents/`, `commands/` relative to it
+   - Resolve `skills/`, `agents/` relative to it
 
 2. **Ensure target directories exist** (create if missing)
    - `~/.config/kilo/`
    - `~/.config/kilo/agent/`
-   - `~/.config/kilo/commands/`
    - `~/.kilo/skills/`
 
 3. **Back up `kilo.jsonc`** to `kilo.jsonc.bak.<timestamp>` if it exists
@@ -59,12 +58,7 @@ Environment variables (all optional):
    - Target: `~/.config/kilo/agent/`
    - Overwrite if exists (idempotent)
 
-6. **Copy command .md files**
-   - Source: `<pkg>/commands/*.md`
-   - Target: `~/.config/kilo/commands/`
-   - Overwrite if exists
-
-7. **Patch `~/.config/kilo/kilo.jsonc`**
+6. **Patch `~/.config/kilo/kilo.jsonc`**
    - Read JSONC (strip `//` line comments only; block comments `/* */`
      are NOT supported — if present and parsing fails, restore from backup
      and exit code 2)
@@ -73,9 +67,14 @@ Environment variables (all optional):
      absolute paths to avoid separator/case duplicate entries)
    - Write back as JSON (lose comments; acceptable trade-off)
    - On parse error → restore from backup, **exit 2**
-8. **Write manifest** to `~/.config/kilo/.kilo-superpowers-compose.json`
-   recording every path created (agents, commands, skills link, the
-   `skills.paths` entry) + version + upstream tag. Used by uninstall.
+
+7. **Write manifest** to `~/.config/kilo/.kilo-superpowers-compose.json`
+   recording every path created (agents, skills link, the `skills.paths`
+   entry) + version + upstream tag. Used by uninstall.
+
+注：本包不再注册或复制任何斜杠命令——早期版本会向 `~/.config/kilo/commands/`
+复制 `superpowers.md`。移除理由：参考 mimo-compose，用户通过代理选择器中的
+`compose` 代理直接进入工作流，无需在命令面板中额外注册命令。
 9. **Print success message**
    - Number of skills installed
    - Number of agents installed
@@ -116,7 +115,6 @@ const CONFIG_DIR    = path.join(HOME, '.config', 'kilo');
 const CONFIG_FILE   = path.join(CONFIG_DIR, 'kilo.jsonc');
 const SKILLS_DIR    = path.join(HOME, '.kilo', 'skills');
 const AGENTS_DIR    = path.join(CONFIG_DIR, 'agent');
-const COMMANDS_DIR  = path.join(CONFIG_DIR, 'commands');
 
 const SKILL_LINK    = path.join(SKILLS_DIR, 'superpowers');
 
@@ -176,14 +174,13 @@ function install() {
   const pkgRoot = findPackageRoot();
   const srcSkills   = path.join(pkgRoot, 'skills');
   const srcAgents   = path.join(pkgRoot, 'agents');
-  const srcCommands = path.join(pkgRoot, 'commands');
 
   log('package root', pkgRoot);
   log('config dir',   CONFIG_DIR);
   log('skills dir',   SKILLS_DIR);
 
   // 1. ensure target dirs
-  [CONFIG_DIR, AGENTS_DIR, COMMANDS_DIR, SKILLS_DIR].forEach(ensureDir);
+  [CONFIG_DIR, AGENTS_DIR, SKILLS_DIR].forEach(ensureDir);
 
   // 2. back up config
   const bak = backupConfig();
@@ -209,13 +206,7 @@ function install() {
     if (!DRY_RUN) fs.cpSync(srcAgents, AGENTS_DIR, { recursive: true, force: true });
   }
 
-  // 5. copy commands
-  if (fs.existsSync(srcCommands)) {
-    log('copying commands', srcCommands, '→', COMMANDS_DIR);
-    if (!DRY_RUN) fs.cpSync(srcCommands, COMMANDS_DIR, { recursive: true, force: true });
-  }
-
-  // 6. patch kilo.jsonc
+  // 5. patch kilo.jsonc
   log('patching', CONFIG_FILE);
   let config = readJsonc(CONFIG_FILE);
   if (config.__parseError) {
@@ -239,18 +230,15 @@ function install() {
     skillsLink: SKILL_LINK,
     skillsPathsEntry: srcSkills,
     agents: installedAgentPaths,
-    commands: installedCommandPaths,
   });
 
   // 7. summarize
   console.log('✓ kilo-superpowers-compose installed');
   console.log(`  Skills:  ${SKILL_LINK} → ${srcSkills}`);
   const agentFiles = fs.existsSync(srcAgents) ? fs.readdirSync(srcAgents).filter(f => f.endsWith('.md')) : [];
-  const cmdFiles   = fs.existsSync(srcCommands) ? fs.readdirSync(srcCommands).filter(f => f.endsWith('.md')) : [];
   console.log(`  Agents:  ${agentFiles.join(', ')}`);
-  console.log(`  Cmds:    /${cmdFiles.map(f => f.replace(/\.md$/, '')).join(', /')}`);
   console.log('');
-  console.log('  Restart Kilo CLI / VS Code extension to load.');
+  console.log('  Restart Kilo CLI / VS Code extension to load. Pick the "compose" agent to use the workflow.');
 }
 
 install();
@@ -264,10 +252,9 @@ install();
 
 1. Remove junction at `~/.kilo/skills/superpowers`
 2. Remove agent `.md` files owned by this package
-3. Remove command `.md` files owned by this package
-4. Edit `kilo.jsonc`: remove this package's entries from `skills.paths`
-5. Don't touch any user-created skills, agents, or config
-6. Print summary
+3. Edit `kilo.jsonc`: remove this package's entries from `skills.paths`
+4. Don't touch any user-created skills, agents, or config
+5. Print summary
 
 ### 3.2 Ownership detection — manifest method
 
@@ -286,8 +273,7 @@ Manifest shape (`~/.config/kilo/.kilo-superpowers-compose.json`):
   "upstreamTag": "v6.1.1",
   "skillsLink": "<abs path to ~/.kilo/skills/superpowers>",
   "skillsPathsEntry": "<abs path to pkg/skills>",
-  "agents": ["<abs path to copied agent .md files>"],
-  "commands": ["<abs path to copied command .md files>"]
+  "agents": ["<abs path to copied agent .md files>"]
 }
 ```
 
@@ -296,8 +282,8 @@ like `# Compose Orchestrator`) which was fragile and could mismatch files
 the user hand-edited. With the manifest, removal is precise and never
 touches user-created files. If the manifest is missing on uninstall,
 `uninstall.js` falls back to best-effort removal of the well-known names
-(`compose.md`, `compose-dev.md`, `compose-review.md`, `superpowers.md`,
-the `superpowers` skills link) but warns loudly.
+(`compose.md`, `compose-dev.md`, `compose-review.md`, the `superpowers`
+skills link) but warns loudly.
 
 ### 3.3 Exit codes
 
@@ -342,7 +328,7 @@ if (cmd === '--help' || cmd === '-h') {
   console.log(`Usage: kilo-superpowers-compose <command>
 
 Commands:
-  install     Install skills, agents, and commands (default)
+  install     Install skills and agents (default)
   uninstall   Remove everything this package installed
   update      Re-run install (idempotent)
 
@@ -385,8 +371,8 @@ Before tagging v0.1.0, verify on a clean machine:
 - [ ] After install, `~/.kilo/skills/superpowers` is a junction/symlink
 - [ ] After install, `~/.config/kilo/agent/` contains compose*.md
 - [ ] After install, `kilo.jsonc` contains the new path entry
-- [ ] Restarting Kilo, `compose` agent appears in `/agents` picker
-- [ ] `/superpowers` slash command is recognized
+- [ ] Restarting Kilo, `compose` agent appears in the agent picker
+- [ ] Selecting `compose` and talking to it triggers the Superpowers workflow
 - [ ] `node bin/uninstall.js` removes all artifacts
 - [ ] After uninstall, no `superpowers` references remain in `kilo.jsonc`
 - [ ] Kilo still works normally after uninstall

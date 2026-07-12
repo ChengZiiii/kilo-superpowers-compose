@@ -44,30 +44,27 @@ This document captures the architectural decisions for the
 │  │  ├─ plugin/index.js (Path B: config-hook module)     │    │
 │  │  ├─ bin/install.js, uninstall.js, update.js          │    │
 │  │  ├─ skills/  (14 SKILL.md folders from obra)         │    │
-│  │  ├─ agents/  (compose.md, compose-dev.md, ...)       │    │
-│  │  └─ commands/ (superpowers.md)                       │    │
+│  │  └─ agents/  (compose.md, compose-dev.md, ...)       │    │
 │  └─────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────┘
-                          │
-                          │  npm install -g
-                          ▼
+                           │
+                           │  npm install -g
+                           ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  User machine                                                 │
 │  ┌─ ~/.kilo/skills/superpowers → junction to pkg/skills      │
 │  ├─ ~/.config/kilo/agent/compose.md ← copied                │
 │  ├─ ~/.config/kilo/agent/compose-dev.md ← copied            │
 │  ├─ ~/.config/kilo/agent/compose-review.md ← copied         │
-│  ├─ ~/.config/kilo/commands/superpowers.md ← copied         │
 │  └─ ~/.config/kilo/kilo.jsonc.skills.paths += pkg/skills    │
 └──────────────────────────────────────────────────────────────┘
-                          │
-                          │  user runs `kilo`
-                          ▼
+                           │
+                           │  user runs `kilo`
+                           ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  Kilo CLI / VS Code extension                                │
 │  - scans skills/ → 14 skills load                            │
 │  - scans agent/ → 3 agents register                          │
-│  - reads commands/ → /superpowers appears                    │
 │  - user picks "compose" agent → Superpowers workflow active  │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -108,20 +105,22 @@ kilo-superpowers-compose/
 │   ├── dispatching-parallel-agents/SKILL.md
 │   └── writing-skills/SKILL.md
 ├── agents/                      ✅ 3 agent .md files (no model field)
-│   ├── compose.md               # orchestrator (primary)
+│   ├── compose.md               # orchestrator (primary) — user picks this to enter the workflow
 │   ├── compose-dev.md           # subagent for TDD implementation
 │   └── compose-review.md        # subagent for 2-stage review
-├── commands/
-│   └── superpowers.md           ✅ /superpowers slash command (routes to compose)
 ├── test/                        ✅ node:test, zero-dep (excluded from tarball via files)
 ├── docs/
 │   ├── DESIGN.md                (this file)
 │   ├── INSTALLER.md
 │   ├── AGENTS.md
 │   └── REFERENCES.md
-└── package.json "files"         ✅ whitelist = ["bin","skills","agents","commands"]
+└── package.json "files"         ✅ whitelist = ["bin","skills","agents"]
                                    (README + LICENSE included automatically by npm; docs/ excluded)
 ```
+
+注：v0.1.x 早期版本曾在 `commands/superpowers.md` 注册一条 `/superpowers` 斜杠命令。
+自 v0.1.3 起移除——参考 moyu-by/opencode-mimo-compose 的做法：用户通过在代理选择器
+中选取 `compose` 代理直接进入工作流，不额外暴露斜杠命令。
 
 ---
 
@@ -134,9 +133,12 @@ kilo-superpowers-compose/
 | Primary agent | `compose` | Matches mimo-compose convention; short, memorable |
 | Subagent — implementer | `compose-dev` | Disambiguates role |
 | Subagent — reviewer | `compose-review` | Disambiguates role |
-| Slash command | `superpowers` | Different from agent name; evokes the underlying framework |
 | Skill folder | `superpowers` (linked as a unit) | Single junction point under `~/.kilo/skills/` |
 | Individual skill names | **Verbatim from obra** (`brainstorming`, etc.) | ✅ resolved — taken verbatim from obra/superpowers @ `v6.1.1` (see §10 Q3) |
+
+注：本包自 v0.1.3 起**不再注册任何斜杠命令**（早期版本曾注册 `/superpowers`，
+现移除）。用户通过代理选择器中选取 `compose` 代理进入完整工作流，这与
+mimo-compose 的做法一致，避免在用户命令面板中引入额外命令占用。
 
 ---
 
@@ -164,9 +166,9 @@ User adds to `kilo.jsonc`:
 On startup, Kilo loads the package's `main` (`plugin/index.js`) and calls its
 default-exported factory; the returned `config(config)` hook injects the 3
 agents into the runtime config (`config.agent[name]`) and appends the package's
-`skills/` dir to `config.skills.paths`. `/superpowers` is copied + version-marker
-synced. No `.md` files are written by the plugin (agents live only in runtime
-config). Status: pending real-world verification (§10 Q5 decision gate).
+`skills/` dir to `config.skills.paths`. No `.md` files are written by the plugin
+(agents live only in runtime config; user picks `compose` in the agent picker
+to enter the workflow). Status: pending real-world verification (§10 Q5 decision gate).
 
 ### 5.2 Why both?
 
@@ -242,7 +244,9 @@ The installer must work on Windows, macOS, Linux. Key paths:
 | Config dir | `%USERPROFILE%\.config\kilo` | `~/.config/kilo` |
 | Skills dir | `%USERPROFILE%\.kilo\skills` | `~/.kilo/skills` |
 | Agents dir | `%USERPROFILE%\.config\kilo\agent` | `~/.config/kilo/agent` |
-| Commands dir | `%USERPROFILE%\.config\kilo\commands` | `~/.config/kilo/commands` |
+
+> 注：本包不再写入 `~/.config/kilo/commands/`（v0.1.3 起）。用户通过代理选择器
+> 中的 `compose` 代理直接进入工作流。
 
 Use Node's `path.join`, `os.homedir()`, and `path.delimiter`. No string
 concatenation with backslashes.
