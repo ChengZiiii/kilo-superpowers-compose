@@ -1,0 +1,45 @@
+{
+  "name": "kilo-superpowers-compose",
+  "version": "0.1.0",
+  "description": "将 obra/superpowers 工作流打包为 Kilo 插件：一个 compose 编排器代理、/superpowers 斜杠命令与 14 个技能，一条命令安装。",
+  "keywords": [
+    "kilo",
+    "kilo-code",
+    "kilo-cli",
+    "superpowers",
+    "compose",
+    "agent",
+    "subagent",
+    "skills",
+    "tdd",
+    "workflow",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "ChengZiiii",
+  "homepage": "https://github.com/ChengZiiii/kilo-superpowers-compose#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChengZiiii/kilo-superpowers-compose.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChengZiiii/kilo-superpowers-compose/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "kilo-superpowers-compose": "bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "skills",
+    "agents",
+    "commands",
+    "NOTICE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  }
+}

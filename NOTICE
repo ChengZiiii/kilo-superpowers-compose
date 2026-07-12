@@ -1,0 +1,49 @@
+NOTICE
+=======
+
+kilo-superpowers-compose
+------------------------
+
+This package (`kilo-superpowers-compose`) is licensed under the MIT License
+(see `LICENSE`). Copyright (c) 2026 ChengZiiii.
+
+The `skills/` directory of this package is a **verbatim, unmodified copy**
+of the `skills/` directory from the upstream project:
+
+    obra/superpowers
+    Source : https://github.com/obra/superpowers
+    Tag    : v6.1.1
+    Commit : d884ae04edebef577e82ff7c4e143debd0bbec99
+    License: MIT (Copyright (c) 2025 Jesse Vincent)
+
+Only the `skills/` directory is vendored. No other upstream content
+(`hooks/`, `scripts/`, `.opencode/`, `.claude-plugin/`, `.codex-plugin/`,
+`.cursor-plugin/`, `.kimi-plugin/`, `.pi/`, `tests/`, `docs/`, `assets/`,
+etc.) is included.
+
+The 14 vendored skills (each a `<name>/SKILL.md` plus any sibling files
+such as reference notes, example prompts, or helper scripts) are copied
+unchanged so that the upstream MIT attribution and authorship are
+preserved:
+
+  - using-superpowers
+  - brainstorming
+  - test-driven-development
+  - systematic-debugging
+  - verification-before-completion
+  - writing-plans
+  - executing-plans
+  - subagent-driven-development
+  - requesting-code-review
+  - receiving-code-review
+  - using-git-worktrees
+  - finishing-a-development-branch
+  - dispatching-parallel-agents
+  - writing-skills
+
+To upgrade the vendored skills: re-copy `skills/` from a newer tag of
+obra/superpowers, then update the tag/commit above in this file.
+
+The three agent prompts in `agents/` and the `/superpowers` command in
+`commands/` are original to this package and are MIT-licensed as part of
+it. The installer in `bin/` is likewise original to this package.

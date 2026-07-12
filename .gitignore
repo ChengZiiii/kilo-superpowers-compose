@@ -1,0 +1,40 @@
+# 依赖
+node_modules/
+
+# npm 打包产物与缓存
+*.tgz
+package.tgz
+.npm/
+
+# 日志
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 机密 / 本地环境变量（切勿入库）
+.env
+.env.*
+!.env.example
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 安装器本地试运行产物（隔离 KILO_HOME 测试目录 / 误把仓库当 home 时的备份）
+.tmp-kilo-home/
+kilo.jsonc
+kilo.jsonc.bak.*
+.kilo-superpowers-compose.json
+
