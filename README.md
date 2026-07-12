@@ -11,7 +11,7 @@
 
 ## Status
 
-**v0.1.3.** Installed via the npm CLI and verified on both **Kilo CLI** and the
+**v0.1.4.** Installed via the npm CLI and verified on both **Kilo CLI** and the
 **VS Code Kilo Code** extension (they share the same config, so one install
 covers both).
 
@@ -89,6 +89,13 @@ Until then, use the npm install above.
 
 > v0.1.x 早期版本同时注册了 `/superpowers` 斜杠命令；自 v0.1.3 起移除以与
 > mimo-compose 保持一致——选 `compose` 代理即可触发完整工作流，不再占用命令面板。
+> **从老版本升级到 v0.1.3+：** 若你的 `~/.config/kilo/commands/superpowers.md`
+> 仍是 v0.1.2 之前留下的副本，运行 `kilo-superpowers-compose uninstall`（再 install
+> 也可）会顺手清掉它。如果还想自己手动清：
+>
+> ```powershell
+> Remove-Item -Force "$env:USERPROFILE\.config\kilo\commands\superpowers.md"
+> ```
 
 ## Update & uninstall
 

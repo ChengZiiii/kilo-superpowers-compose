@@ -386,6 +386,14 @@ export function runUninstall(opts = {}) {
   }
   for (const p of agentPaths) safeRemove(p, { dryRun, log });
 
+  // 1b. 兜底清理：从 v0.1.3 之前的版本残留的 /superpowers 斜杠命令副本。
+  // 新安装已不再分发该命令；但老用户机器上可能还留有旧文件，主动清掉防止幽灵命令。
+  const legacyCmd = path.join(ctx.configDir, 'commands', 'superpowers.md');
+  let legacyRemoved = false;
+  if (linkExists(legacyCmd)) {
+    legacyRemoved = safeRemove(legacyCmd, { dryRun, log });
+  }
+
   // 2. 移除技能链接（清单有记录类型则用之，否则按链接处理）
   if (linkExists(ctx.skillLink)) {
     safeRemove(ctx.skillLink, { dryRun, log });
@@ -430,6 +438,9 @@ export function runUninstall(opts = {}) {
   console.log(`  agents: ${agentPaths.length} 个文件`);
   console.log(`  技能链接: ${ctx.skillLink}`);
   console.log(`  kilo.jsonc: skills.paths 移除 ${removedEntries} 条`);
+  if (legacyRemoved) {
+    console.log(`  遗留命令: 已移除 ~/.config/kilo/commands/superpowers.md（来自 v0.1.3 之前版本）`);
+  }
   console.log('  未触碰用户自有的技能 / 代理 / 配置。');
   return EXIT.OK;
 }

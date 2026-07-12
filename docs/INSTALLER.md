@@ -252,9 +252,14 @@ install();
 
 1. Remove junction at `~/.kilo/skills/superpowers`
 2. Remove agent `.md` files owned by this package
-3. Edit `kilo.jsonc`: remove this package's entries from `skills.paths`
-4. Don't touch any user-created skills, agents, or config
-5. Print summary
+3. **Defensive cleanup:** remove any leftover `superpowers.md` in
+   `~/.config/kilo/commands/` from older (≤ v0.1.2) installs that still
+   registered the removed `/superpowers` slash command. v0.1.3+ no longer
+   ships that command, but stale copies from prior versions are cleaned
+   here so they don't haunt the user as a ghost entry. Logged when found.
+4. Edit `kilo.jsonc`: remove this package's entries from `skills.paths`
+5. Don't touch any user-created skills, agents, or config
+6. Print summary
 
 ### 3.2 Ownership detection — manifest method
 

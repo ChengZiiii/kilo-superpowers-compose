@@ -244,6 +244,40 @@ test('幂等：重复 install 不产生重复 skills.paths 条目', () => {
 });
 
 // ─── 卸载保留用户自有文件 ─────────────────────────────────────────────
+// ─── 卸载清理从 v0.1.3 之前的版本残留的 /superpowers 命令副本 ────────
+test('卸载：清理从老版本残留的 ~/.config/kilo/commands/superpowers.md', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    // 模拟老版本 v0.1.2 留下的命令副本（即使没装本包）
+    const cmdsDir = path.join(ctx.configDir, 'commands');
+    fs.mkdirSync(cmdsDir, { recursive: true });
+    const legacy = path.join(cmdsDir, 'superpowers.md');
+    fs.writeFileSync(legacy, '# legacy /superpowers\n', 'utf8');
+    assert.ok(fs.existsSync(legacy));
+
+    // 不需要 install，直接 uninstall 也应清掉这个残留文件
+    assert.equal(lib.runUninstall({ context: ctx }), EXIT.OK);
+    assert.ok(!fs.existsSync(legacy), '残留的 /superpowers 命令副本应被清理');
+  } finally {
+    rmrf(home);
+  }
+});
+
+test('卸载：未发现残留命令时不打印遗留提示，保持兼容输出', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    // 不放任何残留命令
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    assert.equal(lib.runUninstall({ context: ctx }), EXIT.OK);
+    const cmdFile = path.join(ctx.configDir, 'commands', 'superpowers.md');
+    assert.ok(!fs.existsSync(cmdFile));
+  } finally {
+    rmrf(home);
+  }
+});
+
 test('卸载：保留用户自有的 agent / 用户自有的 skills.paths 条目', () => {
   const home = mkTempHome();
   try {
