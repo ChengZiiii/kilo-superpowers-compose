@@ -1,8 +1,5 @@
 ---
-description: |
-  Implementation subagent for the compose workflow. Loads TDD,
-  systematic debugging, and verification-before-completion skills.
-  Receives a single discrete task; executes it; reports back.
+description: "Implementation subagent for the compose workflow. Executes a single discrete task via TDD, systematic debugging, and verification."
 mode: subagent
 ---
 

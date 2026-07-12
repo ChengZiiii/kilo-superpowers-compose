@@ -11,9 +11,15 @@
 
 ## Status
 
-**v0.1.0 — published and working.** Verified on both **Kilo CLI** and the
+**v0.1.1.** Installed via the npm CLI and verified on both **Kilo CLI** and the
 **VS Code Kilo Code** extension (they share the same config, so one install
 covers both).
+
+> **About the `plugin` field:** Kilo's `plugin: ["…"]` field in `kilo.jsonc`
+> does **not** load npm-named plugins in current Kilo — adding it only slows
+> startup. This package ships a plugin module (`plugin/index.js`) for the
+> future, but **do not add it to the `plugin` field**. Use the npm CLI install
+> below. See [docs/DESIGN.md §10 Q5](docs/DESIGN.md#10-open-questions--decisions-pending).
 
 ## What it is
 
@@ -27,10 +33,6 @@ the full, disciplined Superpowers workflow on any coding task.
 
 ## Installation
 
-### npm (recommended)
-
-This is the supported, verified way to install:
-
 ```bash
 npm install -g kilo-superpowers-compose
 kilo-superpowers-compose install
@@ -39,11 +41,6 @@ kilo-superpowers-compose install
 Then restart Kilo. You'll see `compose` in `/agents` and `/superpowers` will
 work. One install covers both Kilo CLI and the VS Code Kilo Code extension
 (they share `~/.config/kilo/`).
-
-> The `plugin` field in `kilo.jsonc` is **not supported** in v0.1 (Kilo's
-> plugin hook contract is unstable and can only register skills, not agents).
-> Use the npm install above. See
-> [docs/DESIGN.md §10 Q5](docs/DESIGN.md#10-open-questions--decisions-pending).
 
 ### Kilo Marketplace (official channel — coming soon)
 
@@ -137,7 +134,7 @@ backup) · `3` target dir not writable · `4` skills link creation failed.
 ## Development & testing
 
 ```bash
-node --test     # zero-dependency tests (installer logic + install/uninstall round-trip)
+node --test     # zero-dependency tests (installer logic + plugin module + install/uninstall round-trip)
 npm pack        # inspect the published tarball
 ```
 

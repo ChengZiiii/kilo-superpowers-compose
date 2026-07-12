@@ -274,7 +274,11 @@ test('runUpdate: 等同重新安装，幂等', () => {
     assert.equal(lib.runUpdate({ context: ctx }), EXIT.OK);
     assert.ok(fs.existsSync(ctx.manifestFile));
     const m = lib.readManifest(ctx.manifestFile);
-    assert.equal(m.version, '0.1.0');
+    // 版本从 package.json 动态读取，避免每次发版都改本断言。
+    const pkgVersion = JSON.parse(
+      fs.readFileSync(path.resolve('package.json'), 'utf8')
+    ).version;
+    assert.equal(m.version, pkgVersion);
     assert.equal(m.upstreamTag, lib.UPSTREAM_TAG);
   } finally {
     rmrf(home);

@@ -143,10 +143,7 @@ following strict red-green-refactor discipline.
 
 ```markdown
 ---
-description: |
-  Implementation subagent for the compose workflow. Loads TDD,
-  systematic debugging, and verification-before-completion skills.
-  Receives a single discrete task; executes it; reports back.
+description: "Implementation subagent for the compose workflow. Executes a single discrete task via TDD, systematic debugging, and verification."
 mode: subagent
 ---
 ```
@@ -212,10 +209,7 @@ compliance. Stage 2 = code quality. Reports findings by severity.
 
 ```markdown
 ---
-description: |
-  Two-stage code review subagent for the compose workflow.
-  Stage 1: spec compliance. Stage 2: code quality.
-  Reports findings by severity (critical / important / nit).
+description: "Two-stage code review subagent (spec compliance + code quality) for the compose workflow. Reports findings only; never edits code."
 mode: subagent
 ---
 ```

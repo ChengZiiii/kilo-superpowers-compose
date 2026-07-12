@@ -40,7 +40,8 @@ This document captures the architectural decisions for the
 │  npm registry                                                │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │ kilo-superpowers-compose (npm pkg)                   │    │
-│  │  ├─ package.json (with opencode plugin hook)         │    │
+│  │  ├─ package.json (main + kilo/opencode plugin hook)  │    │
+│  │  ├─ plugin/index.js (Path B: config-hook module)     │    │
 │  │  ├─ bin/install.js, uninstall.js, update.js          │    │
 │  │  ├─ skills/  (14 SKILL.md folders from obra)         │    │
 │  │  ├─ agents/  (compose.md, compose-dev.md, ...)       │    │
@@ -150,9 +151,9 @@ npm install -g kilo-superpowers-compose
 kilo-superpowers-compose install
 ```
 
-**Path B — Kilo/OpenCode plugin field (also works)**:
+**Path B — Kilo/OpenCode plugin field (v0.1.1)**:
 
-User adds to `kilo.jsonc` (or `opencode.json`):
+User adds to `kilo.jsonc`:
 
 ```jsonc
 {
@@ -160,8 +161,12 @@ User adds to `kilo.jsonc` (or `opencode.json`):
 }
 ```
 
-CLI on startup detects the plugin in the `plugin` array and triggers install.
-(Falls back to Path A if Kilo doesn't auto-install.)
+On startup, Kilo loads the package's `main` (`plugin/index.js`) and calls its
+default-exported factory; the returned `config(config)` hook injects the 3
+agents into the runtime config (`config.agent[name]`) and appends the package's
+`skills/` dir to `config.skills.paths`. `/superpowers` is copied + version-marker
+synced. No `.md` files are written by the plugin (agents live only in runtime
+config). Status: pending real-world verification (§10 Q5 decision gate).
 
 ### 5.2 Why both?
 
@@ -328,32 +333,45 @@ licensed MIT** (see root `LICENSE`).
 |---|---|---|---|
 | **P1 — Design** | Lock in all decisions in this doc | now → lock | This doc reviewed and approved |
 | **P2 — Minimal runnable** | npm package installs and `compose` agent appears in Kilo | 1-2 days | `npm install -g && install` works locally |
-| **P3 — Dual-protocol verify** | Path B (`plugin` field) also works | 0.5 day | Both install paths produce identical end state |
+| **P3 — Dual-protocol verify** | Path B (`plugin` field) tested; **does not work** in current Kilo | 0.5 day | See §10 Q5: `plugin` field is a no-op; Path A (npm CLI) is the only method |
 | **P4 — Polish** | uninstall/update scripts, README, demo | 1 week | Uninstall is clean; update preserves user config; README has screenshots |
 | **P5 — Distribute** | Publish to npm public, submit to kilo-marketplace | 1 day | Package on npm; PR open against kilo-marketplace |
 
-### ✅ Q5: Path B (`plugin` field) — researched, deferred to post-v0.1
+### ✅ Q5: Path B (`plugin` field) — tested 2026-07, **does not work in current Kilo; Path A is the only method**
 
-The `plugin: string[]` field in `kilo.jsonc` loads `{plugin,plugins}/*.{ts,js}`
-modules from the named package. Research against the upstream OpenCode plugin
-interface (obra/superpowers `.opencode/plugins/superpowers.js`) shows the
-likely contract: export a factory returning a `config(config)` hook that
-mutates the live config (e.g. inject `skills.paths`). **However:**
+Real-world testing on Kilo CLI + VS Code Kilo Code (Kilo's `@kilocode/plugin`
+v7.4.5) produced a definitive, counterintuitive result:
 
-- That hook registers **skills only** — it cannot place agent `.md` /
-  command `.md` files on disk, so it alone cannot reproduce Path A's end
-  state (the `compose` agent + `/superpowers` command).
-- The hook is `experimental.*` in OpenCode and the Kilo-specific loading
-  semantics are not documented in the Kilo config reference; a speculative
-  plugin module could break Kilo startup if the interface diverged.
+**The `plugin: ["kilo-superpowers-compose"]` field does NOT load npm-named
+plugins.** With the package present in Kilo's own `~/.config/kilo/node_modules`,
+adding it to the `plugin` field: ① never imported the module (no load
+observable), ② when the package was absent, sent Kilo to the npm registry on
+every startup (slow startup, mirrored registry), ③ never surfaced the `compose`
+agent. The field is effectively a no-op for plugin loading in this Kilo and
+should not be used.
 
-**Decision (v0.1.0):** Path A (explicit `kilo-superpowers-compose install`)
-is the only supported install path. Path B is **deferred / experimental**.
-The official Kilo distribution path is the **Marketplace** (copies agents to
-`~/.config/kilo/agents/` and skills to `~/.config/kilo/skills/`), targeted in
-P5. Future work: verify Kilo's plugin hook contract against the kilocode
-source, then ship `plugin/superpowers-compose.js` reusing the obra `config`
-hook pattern.
+**What DOES work — the glob loader (not shipped):** Kilo loads plugins from the
+glob `~/.config/kilo/plugin/*.{js,ts}`. A loader file there that re-exports the
+package's factory is imported, its `server()` is called, and its `config(cfg)`
+hook runs — and `cfg` at runtime **does** contain `agent`, `skills.paths`, and
+`command`. Verified end-to-end: a glob loader injected `compose`/`compose-dev`/
+`compose-review` into `cfg.agent` and `compose` appeared in `/agents`. So the
+plugin `config`-hook contract itself is correct; only the `plugin`-field
+*discovery* mechanism is dead.
+
+**Decision (v0.1.1):** Ship **Path A (npm CLI) as the only supported install
+method.** The glob-loader path works technically but is more complex than the
+file-based Path A, leans on an undocumented glob behavior, and its only
+advantage (skip re-running `install` on update) is marginal — not worth a
+second user-facing method. `plugin/index.js` is kept in the package (dormant,
+zero-dep, fully `try/catch`-wrapped) so it can be enabled the moment Kilo
+properly loads npm-named plugins via the `plugin` field or stabilizes the glob
+loader. README explicitly warns **not** to add the package to the `plugin`
+field.
+
+To revisit later: re-test on a newer Kilo build whether `plugin:["name"]`
+resolves; if yes, the existing `plugin/index.js` + `main`/`exports`/markers
+light up with no code change.
 
 ---
 
@@ -361,7 +379,7 @@ hook pattern.
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Kilo CLI `plugin` field not honored | Medium | Path B breaks; Path A still works | **Path A is the only supported path in v0.1** (see §10 Q5). Path B deferred. Marketplace is the official distribution channel (P5). |
+| Kilo CLI `plugin` field not honored | Medium | Path B's agents don't appear; Path A still works | **v0.1.1** ships a defensive `plugin/index.js` (full try/catch, can't crash startup). Path A remains the verified path until the S1.5/S1.6 decision gate confirms Path B (see §10 Q5). |
 | Skill content evolves in obra, breaks our agent prompts | Medium | Orchestrator gets confused | Pin version; review upstream changes before bumping |
 | Windows junction creation fails (rare edge cases) | Low | Skills don't load | Fall back to recursive copy with de-dup check |
 | `kilo.jsonc` corruption if user has weird custom format | Low | Kilo won't start | Backup `kilo.jsonc` before patching; restore on parse failure |
