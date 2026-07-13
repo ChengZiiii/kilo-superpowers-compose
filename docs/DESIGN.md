@@ -1,7 +1,8 @@
 # Design Document
 
-> Status: **Phase 2 — implementation in progress (locked design, doc amendments below)**
-> Last updated: 2026-07-12
+> Status: **v0.2.0 — release candidate for npm publish** (locked design, doc
+> amendments tracked here)
+> Last updated: 2026-07-14
 
 This document captures the architectural decisions for the
 `kilo-superpowers-compose` plugin. Anything that is "decided" is marked
@@ -52,11 +53,13 @@ This document captures the architectural decisions for the
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  User machine                                                 │
-│  ┌─ ~/.kilo/skills/superpowers → junction to pkg/skills      │
+│  ┌─ ~/.kilo/skills/compose → junction to pkg/skills         │
 │  ├─ ~/.config/kilo/agent/compose.md ← copied                │
 │  ├─ ~/.config/kilo/agent/compose-dev.md ← copied            │
 │  ├─ ~/.config/kilo/agent/compose-review.md ← copied         │
-│  └─ ~/.config/kilo/kilo.jsonc.skills.paths += pkg/skills    │
+│  ├─ ~/.config/kilo/kilo.jsonc.skills.paths  += pkg/skills   │
+│  └─ ~/.config/kilo/kilo.jsonc.permission.skill              │
+│       ["compose-*"] = "deny"  (last-position, see §13)       │
 └──────────────────────────────────────────────────────────────┘
                            │
                            │  user runs `kilo`
@@ -89,33 +92,43 @@ kilo-superpowers-compose/
 │   ├── install.js               ✅ see INSTALLER.md
 │   ├── uninstall.js             ✅ manifest-based removal
 │   └── update.js                ✅ re-runs install.js idempotently
-├── skills/                      ✅ 14 SKILL.md folders (verbatim from obra/superpowers v6.1.1)
-│   ├── using-superpowers/SKILL.md
-│   ├── brainstorming/SKILL.md
-│   ├── test-driven-development/SKILL.md
-│   ├── systematic-debugging/SKILL.md
-│   ├── verification-before-completion/SKILL.md
-│   ├── writing-plans/SKILL.md
-│   ├── executing-plans/SKILL.md
-│   ├── subagent-driven-development/SKILL.md
-│   ├── requesting-code-review/SKILL.md
-│   ├── receiving-code-review/SKILL.md
-│   ├── using-git-worktrees/SKILL.md
-│   ├── finishing-a-development-branch/SKILL.md
-│   ├── dispatching-parallel-agents/SKILL.md
-│   └── writing-skills/SKILL.md
-├── agents/                      ✅ 3 agent .md files (no model field)
+├── skills/                      ✅ 14 SKILL.md folders (folder names verbatim from
+│                                       obra/superpowers v6.1.1; frontmatter `name:`
+│                                       prefixed `compose-` via `script/prefix-skills.mjs`)
+│   ├── using-superpowers/SKILL.md           → name: compose-using-superpowers
+│   ├── brainstorming/SKILL.md               → name: compose-brainstorming
+│   ├── test-driven-development/SKILL.md     → name: compose-test-driven-development
+│   ├── systematic-debugging/SKILL.md        → name: compose-systematic-debugging
+│   ├── verification-before-completion/SKILL.md → name: compose-verification-before-completion
+│   ├── writing-plans/SKILL.md               → name: compose-writing-plans
+│   ├── executing-plans/SKILL.md             → name: compose-executing-plans
+│   ├── subagent-driven-development/SKILL.md → name: compose-subagent-driven-development
+│   ├── requesting-code-review/SKILL.md      → name: compose-requesting-code-review
+│   ├── receiving-code-review/SKILL.md       → name: compose-receiving-code-review
+│   ├── using-git-worktrees/SKILL.md         → name: compose-using-git-worktrees
+│   ├── finishing-a-development-branch/SKILL.md → name: compose-finishing-a-development-branch
+│   ├── dispatching-parallel-agents/SKILL.md → name: compose-dispatching-parallel-agents
+│   └── writing-skills/SKILL.md              → name: compose-writing-skills
+├── agents/                      ✅ 3 agent .md files (no `model` field; each carries
+│                                       a `permission.skill: compose-*: allow` block to
+│                                       override the global deny — see §13)
 │   ├── compose.md               # orchestrator (primary) — user picks this to enter the workflow
 │   ├── compose-dev.md           # subagent for TDD implementation
 │   └── compose-review.md        # subagent for 2-stage review
 ├── test/                        ✅ node:test, zero-dep (excluded from tarball via files)
+├── script/
+│   ├── vendor.mjs               # ⌘ download skills from obra/ and write to skills/
+│   └── prefix-skills.mjs        # ⌘ idempotently add `compose-` to each SKILL.md frontmatter
 ├── docs/
 │   ├── DESIGN.md                (this file)
 │   ├── INSTALLER.md
 │   ├── AGENTS.md
 │   └── REFERENCES.md
-└── package.json "files"         ✅ whitelist = ["bin","skills","agents"]
-                                   (README + LICENSE included automatically by npm; docs/ excluded)
+├── docs/superpowers/
+│   ├── specs/                   ⌘ detailed specs behind §10/Q3/§13
+│   └── plans/                   ⌘ TDD task plans that produced the v0.2.0 code
+└── package.json "files"         ✅ whitelist = ["bin","skills","agents","plugin","NOTICE"]
+                                   (README + LICENSE included automatically by npm; docs/, test/, script/ excluded)
 ```
 
 注：v0.1.x 早期版本曾在 `commands/superpowers.md` 注册一条 `/superpowers` 斜杠命令。
@@ -133,8 +146,8 @@ kilo-superpowers-compose/
 | Primary agent | `compose` | Matches mimo-compose convention; short, memorable |
 | Subagent — implementer | `compose-dev` | Disambiguates role |
 | Subagent — reviewer | `compose-review` | Disambiguates role |
-| Skill folder | `superpowers` (linked as a unit) | Single junction point under `~/.kilo/skills/` |
-| Individual skill names | **Verbatim from obra** (`brainstorming`, etc.) | ✅ resolved — taken verbatim from obra/superpowers @ `v6.1.1` (see §10 Q3) |
+| Skill folder | `compose` (linked as a unit; `~/.kilo/skills/compose`) | Single junction point under `~/.kilo/skills/`; matches the agent / skill namespace (renamed from `superpowers` in v0.2.0 — installer migrates away the old link) |
+| Individual skill names | **Prefix `compose-` (intrinsic)** — folder names remain verbatim from obra (`brainstorming/`, `using-superpowers/`, …); only the SKILL.md frontmatter `name:` field gets the prefix via `script/prefix-skills.mjs` | ✅ resolved — vendor locked to obra/superpowers @ `v6.1.1` (see §10 Q3); `compose-` prefix is structural, not opt-in |
 
 注：本包自 v0.1.3 起**不再注册任何斜杠命令**（早期版本曾注册 `/superpowers`，
 现移除）。用户通过代理选择器中选取 `compose` 代理进入完整工作流，这与
@@ -331,11 +344,11 @@ licensed MIT** (see root `LICENSE`).
 
 | Phase | Goal | Time | Done when |
 |---|---|---|---|
-| **P1 — Design** | Lock in all decisions in this doc | now → lock | This doc reviewed and approved |
-| **P2 — Minimal runnable** | npm package installs and `compose` agent appears in Kilo | 1-2 days | `npm install -g && install` works locally |
-| **P3 — Dual-protocol verify** | Path B (`plugin` field) tested; **does not work** in current Kilo | 0.5 day | See §10 Q5: `plugin` field is a no-op; Path A (npm CLI) is the only method |
-| **P4 — Polish** | uninstall/update scripts, README, demo | 1 week | Uninstall is clean; update preserves user config; README has screenshots |
-| **P5 — Distribute** | Publish to npm public, submit to kilo-marketplace | 1 day | Package on npm; PR open against kilo-marketplace |
+| **P1 — Design** | Lock in all decisions in this doc | now → lock | This doc reviewed and approved — ✅ done |
+| **P2 — Minimal runnable** | npm package installs and `compose` agent appears in Kilo | 1-2 days | `npm install -g && install` works locally — ✅ done at v0.1.0 |
+| **P3 — Dual-protocol verify** | Path B (`plugin` field) tested; **does not work** in current Kilo | 0.5 day | See §10 Q5: `plugin` field is a no-op; Path A (npm CLI) is the only method — ✅ done |
+| **P4 — Polish** | uninstall/update scripts, manifest-based removal, README, scripts | 1 week | Uninstall is clean; update preserves user config; README has quickstart — ✅ done through v0.1.5 |
+| **P5 — Compose isolation + publish** | v0.2.0: `compose-` skill namespace, junction rename to `compose`, global `permission.skill compose-*: deny`, intrinsic prefix via `script/prefix-skills.mjs`, refactored installer (`bin/lib.js` + thin entrypoints), full TDD test coverage | ongoing | Publish v0.2.0 to npm, submit to kilo-marketplace — **in progress** |
 
 ### ✅ Q5: Path B (`plugin` field) — tested 2026-07, **does not work in current Kilo; Path A is the only method**
 
@@ -383,7 +396,7 @@ light up with no code change.
 | Skill content evolves in obra, breaks our agent prompts | Medium | Orchestrator gets confused | Pin version; review upstream changes before bumping |
 | Windows junction creation fails (rare edge cases) | Low | Skills don't load | Fall back to recursive copy with de-dup check |
 | `kilo.jsonc` corruption if user has weird custom format | Low | Kilo won't start | Backup `kilo.jsonc` before patching; restore on parse failure |
-| Naming collision with existing user skills | Medium | Some skills hidden | Document the `KILO_SUPERPOWERS_PREFIX` escape hatch |
+| Naming collision with existing user skills | Low (mitigated by `compose-` prefix + permission deny in v0.2) | Some skills hidden from built-in agents; users can still `/compose-<x>` manually as escape hatch | None — the `KILO_SUPERPOWERS_PREFIX` opt was removed in v0.2 in favour of an intrinsic `compose-` prefix and Kilo's `permission.skill` mechanism (see §13) |
 
 ## 13. Compose skill isolation (model-side)
 

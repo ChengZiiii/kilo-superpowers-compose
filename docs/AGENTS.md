@@ -21,8 +21,17 @@ description: "The Superpowers development workflow."
 mode: primary
 color: "#8B5CF6"
 steps: 100
+permission:
+  skill:
+    "compose-*": "allow"
 ---
 ```
+
+> The `permission.skill["compose-*"]: "allow"` block overrides the global
+> `permission.skill["compose-*"]: "deny"` that the installer writes into
+> `~/.config/kilo/kilo.jsonc`. Kilo's `Permission.evaluate` is `findLast`,
+> so the agent frontmatter (merged last) wins over the global deny —
+> see DESIGN.md §13 and `docs/superpowers/specs/2026-07-13-compose-skill-isolation-design.md`.
 
 ### 1.3 System prompt body
 
@@ -145,6 +154,9 @@ following strict red-green-refactor discipline.
 ---
 description: "Implementation subagent for the compose workflow. Executes a single discrete task via TDD, systematic debugging, and verification."
 mode: subagent
+permission:
+  skill:
+    "compose-*": "allow"
 ---
 ```
 
@@ -211,6 +223,9 @@ compliance. Stage 2 = code quality. Reports findings by severity.
 ---
 description: "Two-stage code review subagent (spec compliance + code quality) for the compose workflow. Reports findings only; never edits code."
 mode: subagent
+permission:
+  skill:
+    "compose-*": "allow"
 ---
 ```
 
@@ -299,7 +314,7 @@ Per [kilocode.ai/docs/customize/custom-modes](https://kilocode.ai/docs/customize
 | `mode` | yes | `primary` for compose, `subagent` for the other two |
 | `color` | no | ✅ only for compose |
 | `prompt` | implicit (body) | ✅ all three |
-| `permission` | no | ❌ not set; relies on global permissions |
+| `permission` | no | ✅ all three — `skill: { "compose-*": "allow" }` overrides the global `compose-*: deny` (last-write-wins via `Permission.evaluate`'s `findLast`); see DESIGN.md §13 |
 | `steps` | no | ✅ only for compose (100) |
 | `temperature` | no | ❌ default |
 | `model` | no | ❌ **not set** — agents fall back to the user's global default model (see DESIGN.md §9) |
@@ -321,6 +336,7 @@ We chose `compose`, `compose-dev`, `compose-review` because:
 - Subagent namespacing (`compose-*`) keeps the agent picker clean
 
 Risk: a user may already have an agent named `compose`. If so, ours will
-overwrite theirs. This is **acceptable** for v0.1; we document it in the
-README. Future versions could add a `KILO_SUPERPOWERS_PREFIX=1` mode that
-renames to `kilo-compose`, etc.
+overwrite theirs. This is **acceptable** for v0.1+; we document it in the
+README. The previously-proposed `KILO_SUPERPOWERS_PREFIX=1` rename
+escape-hatch was removed in v0.2 in favour of the intrinsic `compose-`
+skill prefix + Kilo's `permission.skill` model-side isolation (DESIGN.md §13).

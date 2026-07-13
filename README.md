@@ -11,9 +11,12 @@
 
 ## Status
 
-**v0.1.5.** Installed via the npm CLI and verified on both **Kilo CLI** and the
-**VS Code Kilo Code** extension (they share the same config, so one install
-covers both).
+**v0.2.0.** Released with the `compose-` skill namespace, junction renamed
+to match, and a global `permission.skill["compose-*"]="deny"` that hides
+compose skills from Kilo's built-in agents (override-allowed in the
+`compose*` agent frontmatter). Installed via the npm CLI and verified on
+both **Kilo CLI** and the **VS Code Kilo Code** extension (they share the
+same config, so one install covers both).
 
 > **About the `plugin` field:** Kilo's `plugin: ["…"]` field in `kilo.jsonc`
 > does **not** load npm-named plugins in current Kilo — adding it only slows
@@ -55,8 +58,11 @@ kilo-superpowers-compose install
 ```
 
 Copies the 3 agent files to `~/.config/kilo/agent/`, creates the skills
-link at `~/.kilo/skills/superpowers`, and adds an entry to `kilo.jsonc`'s
-`skills.paths`. **Idempotent**: safe to re-run.
+junction at `~/.kilo/skills/compose`, patches `kilo.jsonc` to add a
+`skills.paths` entry and set a global `permission.skill["compose-*:deny"]`
+(so built-in agents can't see or invoke compose skills; the three
+`compose*` agents' frontmatter overrides this to `allow`). **Idempotent**:
+safe to re-run.
 
 **Step ③ — Restart Kilo** (fully quit and reopen the CLI; **Reload Window**
 in VS Code).
@@ -74,14 +80,18 @@ Until then, use the npm install above.
 
 ## What gets installed
 
-- **14 skills** under the `superpowers` namespace, vendored verbatim from
-  obra/superpowers `v6.1.1` (MIT): `using-superpowers`, `brainstorming`,
-  `test-driven-development`, `systematic-debugging`,
-  `verification-before-completion`, `writing-plans`, `executing-plans`,
-  `subagent-driven-development`, `requesting-code-review`,
-  `receiving-code-review`, `using-git-worktrees`,
-  `finishing-a-development-branch`, `dispatching-parallel-agents`,
-  `writing-skills`.
+- **14 skills**, each prefixed `compose-` (e.g. `compose-brainstorming`),
+  vendored from obra/superpowers `v6.1.1` (MIT). Folder names are
+  kept verbatim (`brainstorming/`, `using-superpowers/`, …); the
+  `compose-` prefix lives in each SKILL.md's frontmatter `name:` field.
+  Full list: `compose-using-superpowers`, `compose-brainstorming`,
+  `compose-test-driven-development`, `compose-systematic-debugging`,
+  `compose-verification-before-completion`, `compose-writing-plans`,
+  `compose-executing-plans`, `compose-subagent-driven-development`,
+  `compose-requesting-code-review`, `compose-receiving-code-review`,
+  `compose-using-git-worktrees`,
+  `compose-finishing-a-development-branch`,
+  `compose-dispatching-parallel-agents`, `compose-writing-skills`.
 - **3 agents**: `compose` (primary orchestrator), `compose-dev` (TDD
   implementer subagent), `compose-review` (two-stage reviewer subagent). None
   pin a `model` — they use your global default model. Pick `compose` in the
@@ -133,7 +143,7 @@ skills, agents, and config are left untouched.
 link were created. Run `kilo-superpowers-compose install`.
 
 **"I changed package code after install; restarting Kilo doesn't pick it up."**
-— `~/.kilo/skills/superpowers` is a junction pointing to the package
+— `~/.kilo/skills/compose` is a junction pointing to the package
 directory, so package upgrades are picked up automatically. But
 agent files were copied at install time and don't auto-update. Run
 `kilo-superpowers-compose update`.
@@ -162,7 +172,7 @@ Options:
 | Variable | Purpose |
 |---|---|
 | `KILO_HOME=<path>` | Override user home (for testing / isolated configs) |
-| `KILO_SUPERPOWERS_PREFIX=1` | (reserved) prefix skill names; v0.1 isolates via the `superpowers` namespace instead |
+| `KILO_SUPERPOWERS_PREFIX=1` | _unused since v0.2.0_ — all 14 skills are intrinsically `compose-` prefixed; the env var is ignored |
 | `KILO_SUPERPOWERS_DRY_RUN=1` | Print intended actions without modifying anything |
 | `KILO_SUPERPOWERS_VERBOSE=1` | Verbose logging (to stderr) |
 
@@ -180,9 +190,15 @@ backup) · `3` target dir not writable · `4` skills link creation failed.
 
 - **Same-name agent**: if you already have an agent named `compose`, installing
   overwrites it (accepted for v0.1).
-- **Skill namespace**: the 14 skills live under `superpowers/`, so they won't
-  collide with your own `~/.kilo/skills/<name>` skills — only an existing
-  `superpowers` directory would conflict.
+- **Skill namespace & isolation**: all 14 skills are intrinsically prefixed
+  `compose-` (e.g. `compose-brainstorming`). On install, a global
+  `permission.skill["compose-*"]="deny"` is written into `kilo.jsonc`, so
+  Kilo's built-in agents (code / plan / debug / ask / explore / general)
+  cannot see or invoke them. Each of the three shipped agents (`compose`,
+  `compose-dev`, `compose-review`) declares the override `allow` in its
+  frontmatter, which Kilo's `findLast`-based `Permission.evaluate`
+  honours. Folder names under `skills/` remain verbatim from upstream
+  (`brainstorming/`, `using-superpowers/`, …).
 - **Windows links**: skills are linked via a directory junction (no admin
   rights needed); on rare failure it falls back to a recursive copy.
 - **No auto-`postinstall`**: install is explicit, so your `kilo.jsonc` is never
