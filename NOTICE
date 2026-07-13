@@ -7,8 +7,8 @@ kilo-superpowers-compose
 This package (`kilo-superpowers-compose`) is licensed under the MIT License
 (see `LICENSE`). Copyright (c) 2026 ChengZiiii.
 
-The `skills/` directory of this package is a **verbatim, unmodified copy**
-of the `skills/` directory from the upstream project:
+The `skills/` directory of this package is **derived from** the `skills/`
+directory of the upstream project:
 
     obra/superpowers
     Source : https://github.com/obra/superpowers
@@ -21,10 +21,14 @@ Only the `skills/` directory is vendored. No other upstream content
 `.cursor-plugin/`, `.kimi-plugin/`, `.pi/`, `tests/`, `docs/`, `assets/`,
 etc.) is included.
 
-The 14 vendored skills (each a `<name>/SKILL.md` plus any sibling files
-such as reference notes, example prompts, or helper scripts) are copied
-unchanged so that the upstream MIT attribution and authorship are
-preserved:
+The 14 vendored skills (each a `<name>/SKILL.md` plus any sibling files)
+are derived from the upstream: each skill's frontmatter `name` field is
+namespaced under a `compose-` prefix (e.g. `compose-brainstorming`) and
+all cross-references between skills are updated accordingly, to achieve
+model-side isolation of the compose workflow via Kilo's `permission.skill`
+mechanism. All other content (skill bodies, reference notes, helper
+scripts, copyright/attribution headers) is preserved unchanged. The
+upstream MIT attribution and authorship are retained:
 
   - using-superpowers
   - brainstorming
@@ -41,8 +45,17 @@ preserved:
   - dispatching-parallel-agents
   - writing-skills
 
-To upgrade the vendored skills: re-copy `skills/` from a newer tag of
-obra/superpowers, then update the tag/commit above in this file.
+To upgrade the vendored skills:
+
+  1. node script/vendor.mjs <new-tag>      # re-vendor verbatim skills/
+  2. node script/prefix-skills.mjs         # re-apply compose- prefix (idempotent)
+  3. node --test                            # verify
+  4. update the tag/commit above in this file; update docs/DESIGN.md §10 Q3
+
+Because skill permission uses the `compose-*` glob (not an enumerated
+list), newly added upstream skills are covered automatically — the only
+manual work is deciding whether to wire a new skill into the compose
+agent prompts.
 
 The three agent prompts in `agents/` and the `/superpowers` command in
 `commands/` are original to this package and are MIT-licensed as part of

@@ -59,9 +59,12 @@
 
 ## 实现的硬性约束（已决定 —— 不要随意更改）
 
-- **技能原样内嵌自 obra/superpowers（MIT 许可）。** 每个 `SKILL.md` 都要保留原始
-  版权 / 署名头。锁定到 obra/superpowers `v6.1.1`，并谨慎升级（DESIGN.md §10 Q3）。
-  本包自身为 MIT 许可（见 `LICENSE` 与 `NOTICE`）。
+- **技能派生自 obra/superpowers（MIT 许可）。** 每个技能的 frontmatter `name`
+  命名空间化为 `compose-`、交叉引用同步更新（实现模型侧隔离，见 DESIGN.md §13）；
+  技能正文、references、scripts、版权署名头保持不变。锁定到 obra/superpowers
+  `v6.1.1`。重新 vendor 须跑 `script/vendor.mjs <tag>` + `script/prefix-skills.mjs`
+  （幂等），并谨慎升级（DESIGN.md §10 Q3）。本包自身为 MIT 许可（见 `LICENSE`
+  与 `NOTICE`）。
 - **安装时不复制技能 —— 而是建立 junction**
   （Windows 用 `fs.symlinkSync(src, dst, 'junction')`；Unix 用默认符号链接），
   这样 `npm update` 能即时生效。Windows 的 junction 无需管理员权限。
@@ -85,11 +88,10 @@
 | 子代理 —— 实现者 | `compose-dev`（`mode: subagent`） |
 | 子代理 —— 评审者 | `compose-review`（`mode: subagent`） |
 | 斜杠命令 | （无 —— 用户通过 `compose` 代理进入工作流） |
-| 安装的技能目录 | `superpowers`（单个 junction） |
+| 安装的技能目录 | `compose`（单个 junction） |
 
-安装器环境变量：`KILO_HOME`、`KILO_SUPERPOWERS_PREFIX=1`（给技能名加前缀以避免冲突）、
-`KILO_SUPERPOWERS_DRY_RUN=1`、`KILO_SUPERPOWERS_VERBOSE=1`。退出码 0–4
-（INSTALLER.md §2.3）。
+安装器环境变量：`KILO_HOME`、`KILO_SUPERPOWERS_DRY_RUN=1`、
+`KILO_SUPERPOWERS_VERBOSE=1`。退出码 0–4（INSTALLER.md §2.3）。
 
 ## 随包交付的三个代理（完整提示词见 `docs/AGENTS.md`）
 

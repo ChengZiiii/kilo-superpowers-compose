@@ -190,7 +190,10 @@ to enter the workflow). Status: pending real-world verification (§10 Q5 decisio
 ## 6. Why junction/symlink for skills?
 
 We **don't copy** skill files. We **junction** (Windows) / **symlink** (Unix)
-the entire `skills/` directory to `~/.kilo/skills/superpowers`.
+the entire `skills/` directory to `~/.kilo/skills/compose`.
+
+> 注（v0.2）：技能 junction 名从 `superpowers` 改为 `compose`（与命名空间
+> 一致）；老版本残留的 `superpowers` 链接由 installer 迁移清理。
 
 Reasons:
 
@@ -286,20 +289,12 @@ agent picker, only callable via the `task` tool.
 
 ## 10. Open questions / decisions pending
 
-### ❓ Q1: Skill name collision strategy
+### ✅ Q1: Skill name collision strategy  (resolved — namespaced under `compose-`)
 
-obra/superpowers uses bare names (`brainstorming`, `tdd`, etc.). mimo-compose
-also uses bare names. If a user already has `~/.kilo/skills/brainstorming`,
-ours will collide.
-
-Options:
-- (a) **Verbatim** (current default) — simple, matches upstream, risk of collision
-- (b) **Prefix all with `superpowers-`** — safe but verbose
-- (c) **Namespaced under `superpowers/` folder** — discoverable but ugly in picker
-
-**Recommendation**: start with (a); provide an env var
-`KILO_SUPERPOWERS_PREFIX=1` for users who hit collisions. Iterate based on
-field reports.
+All 14 skills are prefixed `compose-` (e.g. `compose-brainstorming`), which
+eliminates collisions with user skills at both the discovery layer (distinct
+names) and the permission layer (glob `compose-*`). The legacy
+`KILO_SUPERPOWERS_PREFIX` env var has been removed — prefixing is now intrinsic.
 
 ### ❓ Q2: Should we run `postinstall` automatically?
 
@@ -317,10 +312,11 @@ UX is better but:
 obra/superpowers evolves. Breaking changes to skill content could break us.
 
 **Decision:** pinned to tag **`v6.1.1`** (commit `d884ae04edebef577e82ff7c4e143debd0bbec99`).
-Skills are vendored (copied into the repo, not a submodule), so the repo
-holds a frozen snapshot. `NOTICE` records the tag, commit, source URL, and
-MIT license. To upgrade: re-vendor `skills/` from a newer tag deliberately
-and update `NOTICE`. The 14 skills at this tag are enumerated in §3.
+Skills are vendored (copied into the repo, not a submodule) and **derived**:
+each `name` field is namespaced `compose-` and cross-references updated
+(see §13). `NOTICE` records the tag, commit, source URL, and MIT license.
+To upgrade: `node script/vendor.mjs <tag>` then `node script/prefix-skills.mjs`
+(idempotent), then update `NOTICE`. The 14 skills at this tag are enumerated in §3.
 
 ### ✅ Q4: License attribution  (resolved — MIT)
 
@@ -388,3 +384,27 @@ light up with no code change.
 | Windows junction creation fails (rare edge cases) | Low | Skills don't load | Fall back to recursive copy with de-dup check |
 | `kilo.jsonc` corruption if user has weird custom format | Low | Kilo won't start | Backup `kilo.jsonc` before patching; restore on parse failure |
 | Naming collision with existing user skills | Medium | Some skills hidden | Document the `KILO_SUPERPOWERS_PREFIX` escape hatch |
+
+## 13. Compose skill isolation (model-side)
+
+The 14 compose skills are namespaced `compose-*` and isolated via Kilo's
+`permission.skill` mechanism:
+
+- **Global deny** (written by installer into `~/.config/kilo/kilo.jsonc`):
+  `permission.skill["compose-*"] = "deny"`. Built-in agents (code/plan/
+  debug/ask/explore/general) inherit this and can neither see nor invoke
+  compose skills. Other (non-compose) skills remain available to them.
+- **Compose allow** (baked into `compose`/`compose-dev`/`compose-review`
+  frontmatter): `permission.skill["compose-*"] = "allow"`. Kilo's
+  `Permission.evaluate` uses `findLast`, so the agent-frontmatter `allow`
+  (merged last) wins over the global `deny`.
+
+**Scope — model-side only:** this hides compose skills from the *models*
+of other agents. Users can still manually invoke `/compose-<skill>` in any
+agent (Kilo's slash menu and Skills dialog read `skill.all()` unfiltered);
+this is an intentional escape hatch, not a defect. Full user-side hiding
+would require a Kilo core change (filtering `command.list()`/Skills dialog
+by `Skill.available(agent)`) and is out of scope for this plugin.
+
+See `docs/superpowers/specs/2026-07-13-compose-skill-isolation-design.md`
+for the full design and verified Kilo source evidence.
