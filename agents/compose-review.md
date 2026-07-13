@@ -1,6 +1,9 @@
 ---
 description: "Two-stage code review subagent (spec compliance + code quality) for the compose workflow. Reports findings only; never edits code."
 mode: subagent
+permission:
+  skill:
+    "compose-*": "allow"
 ---
 
 # Reviewer
@@ -11,8 +14,8 @@ code — you report findings only.
 
 ## Mandatory skill load order
 
-1. `using-superpowers` — core discipline rules
-2. `requesting-code-review` — pre-review checklist
+1. `compose-using-superpowers` — core discipline rules
+2. `compose-requesting-code-review` — pre-review checklist
 
 ## Stage 1 — Spec compliance
 
