@@ -30,6 +30,7 @@
 | `test/installer.test.js` | 安装器测试：新增 isolation 用例 + 更新 resolvePaths/readEnv 旧断言 | 修改 |
 | `skills/*/SKILL.md`（14 个） | `name` 前缀化 + 交叉引用前缀化（由脚本产出） | 修改 |
 | `agents/compose.md`, `compose-dev.md`, `compose-review.md` | 引用前缀化 + 新增 `permission.skill` frontmatter | 修改 |
+| `agents/compose.md`（Task 2b） | 复杂路径新增"执行方式检查点"步骤（文字 handoff，替代原生 plan_exit） | 修改 |
 | `NOTICE` | "verbatim" → "derived/namespaced" 修订 + vendor 流程 | 修改 |
 | `docs/DESIGN.md` | §6 / §10 Q1 / §10 Q3 修订 + 新增 §13 隔离机制 | 修改 |
 | `AGENTS.md` | verbatim 硬约束条款修订 | 修改 |
@@ -395,6 +396,79 @@ git commit -m "feat: 14 技能 compose- 命名空间化 + agent permission allow
 
 - skills/*/SKILL.md 的 name 与交叉引用前缀化为 compose-（由 prefix-skills.mjs 产出）
 - 三个 agent frontmatter 新增 permission.skill compose-*:allow（isolation 的 allow 侧）"
+```
+
+---
+
+### Task 2b: compose 执行方式检查点（文字 handoff，替代原生 plan_exit）
+
+**Files:**
+- Modify: `agents/compose.md`（复杂路径工作流里，计划获批后插入"执行方式检查点"步骤）
+
+**背景（为何用文字检查点而非 kilo 原生 plan_exit）：**
+已核实 kilo 原生 `plan_exit` 会触发"Ready to implement?"弹窗（Start new session / Continue here / Keep refining），compose 加 `plan_exit: allow` 即可触发。但 "Start new session" 在 `startNew()` 里**硬编码注入 `agent:"code"` 并立即 `loop()` 开跑**（`packages/opencode/src/kilocode/plan-followup.ts`），无 config/env/钩子能在不改 kilo 核心的前提下改成 compose；`default_agent` 也救不了（自动注入的实现指令锁死 code）。原生弹窗为 plan→code 直接实现而设计，与 compose 的子代理编排模型不搭。故改用**文字检查点**：compose 自己在计划获批后用文字呈现执行方式选择；用户若选新会话，由 compose 生成 bootstrap 提示词、用户在**新的 compose 会话**里粘贴执行——无 code 绕道。
+
+**Interfaces:**
+- Consumes: Task 2 已把 compose.md 的技能引用前缀化（故本任务直接用 compose-* 技能名）。
+- Produces: compose.md 复杂路径多一步"执行方式检查点"，不默认直奔子代理驱动。
+
+- [ ] **Step 1: 在 compose.md 复杂路径插入检查点步骤**
+
+定位 `agents/compose.md` 复杂路径的步骤列表（经 Task 2 前缀化后形如）：
+```
+Steps (in order):
+1. `compose-brainstorming` — refine the spec with the user (chunked, validated)
+2. `compose-using-git-worktrees` — set up isolated workspace
+3. `compose-writing-plans` — produce a task plan (2-5 min tasks, exact paths,
+   complete code per task)
+4. **Get explicit user approval** on the plan before proceeding
+5. `compose-subagent-driven-development` — dispatch `compose-dev` per task with
+   full spec context
+6. `compose-requesting-code-review` — dispatch `compose-review` between tasks
+   (or every 3-5 tasks for large plans)
+7. `compose-finishing-a-development-branch` — merge / PR / cleanup decision
+```
+在步骤 4 与原步骤 5 之间插入新步骤 5"Execution mode checkpoint"，原 5/6/7 顺延为 6/7/8：
+```
+4. **Get explicit user approval** on the plan before proceeding
+5. **Execution mode checkpoint** — After the plan is approved, present the
+   user with a choice of how to execute. Do NOT default to one; wait for
+   their answer:
+   - **A. Subagent-driven (default for most plans)** — you dispatch
+     `compose-dev` per task (each task runs with a clean context), two-stage
+     review between tasks.
+   - **B. Hand off to a fresh session** — you emit a self-contained bootstrap
+     prompt (plan path + spec path + "start from Task 1, load
+     `compose-executing-plans`") for the user to paste into a brand-new
+     `compose` session with a clean context window.
+   - **C. Execute inline** — run via `compose-executing-plans` in this
+     session, with checkpoints.
+6. `compose-subagent-driven-development` — dispatch `compose-dev` per task with
+   full spec context
+7. `compose-requesting-code-review` — dispatch `compose-review` between tasks
+   (or every 3-5 tasks for large plans)
+8. `compose-finishing-a-development-branch` — merge / PR / cleanup decision
+```
+
+- [ ] **Step 2: 内容核对（无自动化测试——纯 prompt 文本）**
+
+读回 `agents/compose.md`，确认：
+- 步骤 5"Execution mode checkpoint"存在，三选项 A/B/C 完整；
+- 引用的技能名都是 compose-* 前缀（`compose-executing-plans`），无裸名；
+- 原 5/6/7 已顺延为 6/7/8，编号无重复无跳号。
+
+Run: `rg -n "Execution mode checkpoint" agents/compose.md`
+Expected: 命中一行。
+
+- [ ] **Step 3: 提交**
+
+```bash
+git add agents/compose.md
+git commit -m "feat(compose): 计划获批后增加执行方式文字检查点（A/B/C）
+
+替代 kilo 原生 plan_exit 弹窗：原生 Start new session 硬编码注入
+agent:code 并立即开跑，无法不改核心地改成 compose。改用文字检查点，
+新会话由 compose 生成 bootstrap 提示词、用户在 compose 会话执行。"
 ```
 
 ---
