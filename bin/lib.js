@@ -111,6 +111,18 @@ export function ensureSkillDeny(config, key = SKILL_PERMISSION_KEY) {
   return changed;
 }
 
+// 移除 config.permission.skill[SKILL_PERMISSION_KEY]；删后容器若空则一并清理。
+// 绝不动用户其它 skill / permission 规则。返回是否发生移除。
+export function removeSkillDeny(config, key = SKILL_PERMISSION_KEY) {
+  if (!config.permission || !config.permission.skill) return false;
+  const skill = config.permission.skill;
+  if (!(key in skill)) return false;
+  delete skill[key];
+  if (Object.keys(skill).length === 0) delete config.permission.skill;
+  if (config.permission && Object.keys(config.permission).length === 0) delete config.permission;
+  return true;
+}
+
 // 从给定目录定位包根：bin/ 的上一级。
 export function findPackageRoot(startDir) {
   return path.resolve(startDir, '..');
@@ -372,6 +384,8 @@ export function runInstall(opts = {}) {
       skillsSrc: srcSkills,
       skillsLink: ctx.skillLink,
       skillsLinkType: linkRes.type,
+      permissionKey: SKILL_PERMISSION_KEY,
+      skillPrefix: SKILL_PREFIX,
       skillsPathsEntry: srcSkills,
       agents: installedAgentPaths,
     },
@@ -443,9 +457,13 @@ export function runUninstall(opts = {}) {
     legacyRemoved = safeRemove(legacyCmd, { dryRun, log });
   }
 
-  // 2. 移除技能链接（清单有记录类型则用之，否则按链接处理）
+  // 2. 移除技能链接（compose）；同时防御性清理旧版 'superpowers' 链接
   if (linkExists(ctx.skillLink)) {
     safeRemove(ctx.skillLink, { dryRun, log });
+  }
+  const legacyLinkUn = path.join(ctx.skillsDir, 'superpowers');
+  if (linkExists(legacyLinkUn)) {
+    safeRemove(legacyLinkUn, { dryRun, log });
   }
 
   // 3. 从 kilo.jsonc 移除本包的 skills.paths 条目
@@ -477,7 +495,9 @@ export function runUninstall(opts = {}) {
       );
     }
     removedEntries = before - config.skills.paths.length;
-    if (!dryRun) writeJson(ctx.configFile, config);
+    // 同步移除 permission.skill 的 compose-* 键（精确，保留用户其它规则）
+    const permRemoved = removeSkillDeny(config);
+    if ((removedEntries > 0 || permRemoved) && !dryRun) writeJson(ctx.configFile, config);
   }
 
   // 5. 移除清单

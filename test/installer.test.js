@@ -443,3 +443,63 @@ test('runInstall: 不破坏用户已有的其它 skill 规则', () => {
     assert.equal(cfg.permission.bash, 'allow', '用户 bash 规则保留');
   } finally { rmrf(home); }
 });
+
+// ─── removeSkillDeny 精确移除 ─────────────────────────────────────────
+test('removeSkillDeny: 移除 compose-*，保留其它 skill 规则', () => {
+  const cfg = { permission: { skill: { 'pdf': 'allow', 'compose-*': 'deny' } } };
+  assert.equal(lib.removeSkillDeny(cfg), true);
+  assert.deepEqual(cfg.permission.skill, { 'pdf': 'allow' });
+});
+
+test('removeSkillDeny: 仅 compose-* 时清空 skill 键与 permission 键', () => {
+  const cfg = { permission: { skill: { 'compose-*': 'deny' } } };
+  assert.equal(lib.removeSkillDeny(cfg), true);
+  assert.ok(!('skill' in (cfg.permission || {})), 'skill 键应被删');
+  assert.ok(cfg.permission === undefined || Object.keys(cfg.permission).length === 0,
+    'permission 应被删或为空');
+});
+
+test('removeSkillDeny: 无 compose-* 时无改动返回 false', () => {
+  const cfg = { permission: { skill: { 'pdf': 'allow' }, bash: 'allow' } };
+  assert.equal(lib.removeSkillDeny(cfg), false);
+  assert.equal(cfg.permission.bash, 'allow');
+});
+
+test('卸载：install→uninstall 后 kilo.jsonc 无 compose-* 且无 permission 残留', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    assert.equal(lib.runUninstall({ context: ctx }), EXIT.OK);
+    const cfg = lib.readJsonc(ctx.configFile);
+    assert.ok(!cfg.permission || !cfg.permission.skill || !('compose-*' in cfg.permission.skill),
+      '卸载后不应残留 compose-*');
+  } finally { rmrf(home); }
+});
+
+test('卸载：保留用户已有的 permission（非 compose-*）', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    fs.mkdirSync(ctx.configDir, { recursive: true });
+    fs.writeFileSync(ctx.configFile, JSON.stringify({
+      permission: { skill: { 'pdf': 'allow' }, bash: 'allow' },
+    }), 'utf8');
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    assert.equal(lib.runUninstall({ context: ctx }), EXIT.OK);
+    const cfg = lib.readJsonc(ctx.configFile);
+    assert.equal(cfg.permission.skill['pdf'], 'allow', '用户 pdf 规则保留');
+    assert.equal(cfg.permission.bash, 'allow', '用户 bash 规则保留');
+  } finally { rmrf(home); }
+});
+
+test('manifest: 含 permissionKey 与 skillPrefix 字段', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    const m = lib.readManifest(ctx.manifestFile);
+    assert.equal(m.permissionKey, lib.SKILL_PERMISSION_KEY);
+    assert.equal(m.skillPrefix, lib.SKILL_PREFIX);
+  } finally { rmrf(home); }
+});
