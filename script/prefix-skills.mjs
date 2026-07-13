@@ -30,7 +30,8 @@ function escapeRe(s) {
 }
 
 function readFrontmatterName(content) {
-  const m = content.match(/^---\n([\s\S]*?\n)---/m);
+  // 支持 CRLF (\r\n) 与 LF (\n) 两种行结尾
+  const m = content.match(/^---\r?\n([\s\S]*?\r?\n)---/m);
   if (!m) return null;
   const nm = m[1].match(/^name:\s*(.+?)\s*$/m);
   return nm ? nm[1].replace(/^["']|["']$/g, '') : null;
@@ -57,12 +58,13 @@ function prefixFile(filePath, bareNames) {
   let content = original;
 
   // 1) frontmatter name 字段前缀化（仅 frontmatter 块内）
-  content = content.replace(/^---\n([\s\S]*?\n)---/m, (block, fm) => {
+  content = content.replace(/^---(\r?\n)([\s\S]*?\r?\n)---/m, (block, openingNL, fm) => {
     const newFm = fm.replace(/^(name:\s*)(.+?)\s*$/m, (line, k, v) => {
       const clean = v.replace(/^["']|["']$/g, '');
       return clean.startsWith(PREFIX) ? line : `${k}${PREFIX}${clean}`;
     });
-    return `---\n${newFm}---`;
+    // 保留原文件行结尾（CRLF 或 LF），避免"虚假改动"导致 --check 误报
+    return `---${openingNL}${newFm}---`;
   });
 
   // 2) 全文每个裸名：带负向断言的整词替换（幂等，防双前缀）
