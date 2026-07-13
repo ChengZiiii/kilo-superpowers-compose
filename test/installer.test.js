@@ -77,16 +77,15 @@ test('readEnv: KILO_HOME 覆盖默认 home', () => {
   assert.equal(e.VERBOSE, false);
 });
 
-test('readEnv: 标志位按 "1" 解析', () => {
+test('readEnv: 标志位按 "1" 解析（无 PREFIX 死桩）', () => {
   const e = lib.readEnv({
     KILO_HOME: '/tmp/fake',
     KILO_SUPERPOWERS_DRY_RUN: '1',
     KILO_SUPERPOWERS_VERBOSE: '1',
-    KILO_SUPERPOWERS_PREFIX: '1',
   });
   assert.equal(e.DRY_RUN, true);
   assert.equal(e.VERBOSE, true);
-  assert.equal(e.USE_PREFIX, true);
+  assert.equal(e.USE_PREFIX, undefined, 'USE_PREFIX 死桩应已移除');
 });
 
 test('resolvePaths: 派生所有目标路径', () => {

@@ -43,7 +43,6 @@ export function readEnv(env = process.env) {
     HOME: env.KILO_HOME || os.homedir(),
     DRY_RUN: env.KILO_SUPERPOWERS_DRY_RUN === '1',
     VERBOSE: env.KILO_SUPERPOWERS_VERBOSE === '1',
-    USE_PREFIX: env.KILO_SUPERPOWERS_PREFIX === '1',
   };
 }
 
