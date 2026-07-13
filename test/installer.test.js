@@ -93,7 +93,7 @@ test('resolvePaths: 派生所有目标路径', () => {
   const p = lib.resolvePaths('/tmp/fake');
   assert.equal(p.configDir, path.join('/tmp/fake', '.config', 'kilo'));
   assert.equal(p.configFile, path.join(p.configDir, 'kilo.jsonc'));
-  assert.equal(p.skillLink, path.join('/tmp/fake', '.kilo', 'skills', 'superpowers'));
+  assert.equal(p.skillLink, path.join('/tmp/fake', '.kilo', 'skills', 'compose'));
   assert.equal(p.manifestFile, path.join(p.configDir, '.kilo-superpowers-compose.json'));
 });
 
@@ -209,7 +209,7 @@ test('往返：install 后 uninstall 应净空本包产物', () => {
     assert.ok(fs.existsSync(path.join(ctx.agentsDir, 'compose.md')));
     assert.ok(fs.existsSync(ctx.manifestFile));
     const cfg = lib.readJsonc(ctx.configFile);
-    assert.ok(lib.skillsPathsContains(cfg.skills.paths, ctx.skillLink.replace(/superpowers$/, '')) || cfg.skills.paths.length === 1);
+    assert.equal(cfg.skills.paths.length, 1, 'paths 应只有本包一条');
 
     const code2 = lib.runUninstall({ context: ctx });
     assert.equal(code2, EXIT.OK);
@@ -352,7 +352,22 @@ test('卸载：保留用户自有的 agent / 用户自有的 skills.paths 条目
   }
 });
 
-// ─── runUpdate：等同重新安装 ──────────────────────────────────────────
+// ─── junction 改名 + 旧 superpowers 迁移清理 ──────────────────────────
+test('install: 迁移清理旧 superpowers junction，新建 compose', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    fs.mkdirSync(ctx.skillsDir, { recursive: true });
+    const legacy = path.join(ctx.skillsDir, 'superpowers');
+    fs.symlinkSync(ctx.skillsDir, legacy, process.platform === 'win32' ? 'junction' : 'dir');
+    assert.ok(fs.existsSync(legacy), '前置：旧 junction 存在');
+
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    assert.ok(!fs.existsSync(legacy), '旧 superpowers junction 应被清理');
+    assert.ok(fs.existsSync(ctx.skillLink), '新 compose junction 应存在');
+    assert.ok(ctx.skillLink.endsWith(path.join('.kilo', 'skills', 'compose')));
+  } finally { rmrf(home); }
+});
 test('runUpdate: 等同重新安装，幂等', () => {
   const home = mkTempHome();
   try {

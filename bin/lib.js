@@ -57,7 +57,7 @@ export function resolvePaths(home) {
     configFile: path.join(configDir, 'kilo.jsonc'),
     agentsDir: path.join(configDir, 'agent'),
     skillsDir,
-    skillLink: path.join(skillsDir, 'superpowers'),
+    skillLink: path.join(skillsDir, 'compose'),
     manifestFile: path.join(configDir, MANIFEST_NAME),
   };
 }
@@ -311,6 +311,15 @@ export function runInstall(opts = {}) {
     return EXIT.PARSE_ERROR;
   }
 
+  // 3.5 迁移清理：v0.1.x 旧版 junction 名为 'superpowers'，现已改名 'compose'。
+  //     老用户升级时，旧的 superpowers 链接（指向旧 verbatim skills 源）已无意义，
+  //     主动删掉以免残留两个链接。safeRemove 对 symlink 只删链接本身，安全。
+  const legacyLink = path.join(ctx.skillsDir, 'superpowers');
+  let legacyLinkRemoved = false;
+  if (linkExists(legacyLink)) {
+    legacyLinkRemoved = safeRemove(legacyLink, { dryRun, log });
+  }
+
   // 4. 创建技能链接
   if (!fs.existsSync(srcSkills)) {
     console.error(`✗ 找不到技能源目录: ${srcSkills}`);
@@ -380,6 +389,9 @@ export function runInstall(opts = {}) {
   console.log(`  kilo.jsonc: skills.paths ${added ? '已新增条目' : '已存在（幂等跳过）'}`);
   if (legacyRemovedOnInstall) {
     console.log(`  遗留命令: 已移除 ~/.config/kilo/commands/superpowers.md（来自 v0.1.3 之前版本）`);
+  }
+  if (legacyLinkRemoved) {
+    console.log(`  迁移: 已移除旧 ~/.kilo/skills/superpowers 链接（改为 compose）`);
   }
   console.log('');
   console.log('  请重启 Kilo CLI / VS Code 扩展以加载。');
