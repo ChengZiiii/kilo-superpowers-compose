@@ -370,3 +370,61 @@ test('runUpdate: 等同重新安装，幂等', () => {
     rmrf(home);
   }
 });
+
+// ─── permission.skill compose-* deny 幂等写入 ─────────────────────────
+test('ensureSkillDeny: 空 config 写入 compose-*:deny', () => {
+  const cfg = {};
+  assert.equal(lib.ensureSkillDeny(cfg), true);
+  assert.deepEqual(cfg.permission.skill, { 'compose-*': 'deny' });
+});
+
+test('ensureSkillDeny: 标量 skill 升级为对象并保留原值于 *', () => {
+  const cfg = { permission: { skill: 'ask' } };
+  assert.equal(lib.ensureSkillDeny(cfg), true);
+  assert.deepEqual(cfg.permission.skill, { '*': 'ask', 'compose-*': 'deny' });
+});
+
+test('ensureSkillDeny: 保留用户其它 skill 规则，compose-* 置于末尾', () => {
+  const cfg = { permission: { skill: { 'pdf': 'allow' } } };
+  assert.equal(lib.ensureSkillDeny(cfg), true);
+  assert.deepEqual(cfg.permission.skill, { 'pdf': 'allow', 'compose-*': 'deny' });
+  // compose-* 必须在 '*' 之后（这里无 *，但顺序仍为追加）
+  assert.equal(Object.keys(cfg.permission.skill).pop(), 'compose-*');
+});
+
+test('ensureSkillDeny: 已是 deny 时幂等无改动', () => {
+  const cfg = { permission: { skill: { '*': 'ask', 'compose-*': 'deny' } } };
+  assert.equal(lib.ensureSkillDeny(cfg), false);
+});
+
+test('ensureSkillDeny: 若 compose-* 为非 deny 值则强制改 deny', () => {
+  const cfg = { permission: { skill: { 'compose-*': 'allow' } } };
+  assert.equal(lib.ensureSkillDeny(cfg), true);
+  assert.equal(cfg.permission.skill['compose-*'], 'deny');
+});
+
+test('runInstall: kilo.jsonc 写入 permission.skill compose-*:deny', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    const cfg = lib.readJsonc(ctx.configFile);
+    assert.equal(cfg.permission.skill['compose-*'], 'deny');
+  } finally { rmrf(home); }
+});
+
+test('runInstall: 不破坏用户已有的其它 skill 规则', () => {
+  const home = mkTempHome();
+  try {
+    const ctx = ctxFor(home);
+    fs.mkdirSync(ctx.configDir, { recursive: true });
+    fs.writeFileSync(ctx.configFile, JSON.stringify({
+      permission: { skill: { 'pdf': 'allow' }, bash: 'allow' },
+    }), 'utf8');
+    assert.equal(lib.runInstall({ context: ctx }), EXIT.OK);
+    const cfg = lib.readJsonc(ctx.configFile);
+    assert.equal(cfg.permission.skill['pdf'], 'allow', '用户 pdf 规则保留');
+    assert.equal(cfg.permission.skill['compose-*'], 'deny');
+    assert.equal(cfg.permission.bash, 'allow', '用户 bash 规则保留');
+  } finally { rmrf(home); }
+});

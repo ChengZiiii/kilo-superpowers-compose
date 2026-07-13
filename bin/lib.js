@@ -27,6 +27,10 @@ export const EXIT = Object.freeze({
 // 内嵌技能锁定的上游 tag（见 NOTICE）。重新 vendor 时同步更新。
 export const UPSTREAM_TAG = 'v6.1.1';
 
+// compose 技能命名空间前缀与权限键（见 docs/superpowers/specs/2026-07-13-...）。
+export const SKILL_PREFIX = 'compose-';
+export const SKILL_PERMISSION_KEY = 'compose-*';
+
 // 清单文件名（位于配置目录下，隐藏文件）
 export const MANIFEST_NAME = '.kilo-superpowers-compose.json';
 
@@ -87,6 +91,24 @@ export function normalizePath(p) {
 export function skillsPathsContains(paths, target) {
   const t = normalizePath(target);
   return Array.isArray(paths) && paths.some((p) => normalizePath(p) === t);
+}
+
+// 确保 config.permission.skill[SKILL_PERMISSION_KEY] = 'deny'，且该键位于对象末尾
+// （依赖 kilo Permission.evaluate 的 findLast：末尾的 compose-*:deny 才能赢过 *）。
+// 标量 skill 升级为对象，原值保留于 '*' 键。返回是否发生改动。
+export function ensureSkillDeny(config, key = SKILL_PERMISSION_KEY) {
+  config.permission = config.permission || {};
+  let skill = config.permission.skill;
+  if (typeof skill === 'string') skill = { '*': skill };
+  if (skill === undefined || skill === null) skill = {};
+  skill = { ...skill };
+  const changed = skill[key] !== 'deny';
+  if (changed) {
+    delete skill[key];
+    skill[key] = 'deny'; // 删后重插末尾，保证顺序
+  }
+  config.permission.skill = skill;
+  return changed;
 }
 
 // 从给定目录定位包根：bin/ 的上一级。
@@ -326,7 +348,9 @@ export function runInstall(opts = {}) {
     config.skills.paths.push(srcSkills);
     added = true;
   }
-  if (added && !dryRun) writeJson(ctx.configFile, config);
+  // 6b. 确保 permission.skill['compose-*']='deny'（模型侧隔离的 deny 侧，幂等）
+  const permChanged = ensureSkillDeny(config);
+  if ((added || permChanged) && !dryRun) writeJson(ctx.configFile, config);
 
   // 7. 写清单
   writeManifest(
