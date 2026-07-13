@@ -42,7 +42,6 @@ if (cmd === '--help' || cmd === '-h') {
       '',
       '环境变量:',
       '  KILO_HOME=<path>                  覆盖用户主目录（多用于测试）',
-      '  KILO_SUPERPOWERS_PREFIX=1         （保留）为技能名加前缀；v0.1 以 junction 命名空间隔离',
       '  KILO_SUPERPOWERS_DRY_RUN=1        只打印将执行的动作，不修改任何文件',
       '  KILO_SUPERPOWERS_VERBOSE=1        输出详细日志（到 stderr）',
     ].join('\n')
