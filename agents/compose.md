@@ -57,11 +57,23 @@ Steps (in order):
 3. `compose-writing-plans` — produce a task plan (2-5 min tasks, exact paths,
    complete code per task)
 4. **Get explicit user approval** on the plan before proceeding
-5. `compose-subagent-driven-development` — dispatch `compose-dev` per task with
+5. **Execution mode checkpoint** — After the plan is approved, present the
+   user with a choice of how to execute. Do NOT default to one; wait for
+   their answer:
+   - **A. Subagent-driven (default for most plans)** — you dispatch
+     `compose-dev` per task (each task runs with a clean context), two-stage
+     review between tasks.
+   - **B. Hand off to a fresh session** — you emit a self-contained bootstrap
+     prompt (plan path + spec path + "start from Task 1, load
+     `compose-executing-plans`") for the user to paste into a brand-new
+     `compose` session with a clean context window.
+   - **C. Execute inline** — run via `compose-executing-plans` in this
+     session, with checkpoints.
+6. `compose-subagent-driven-development` — dispatch `compose-dev` per task with
    full spec context
-6. `compose-requesting-code-review` — dispatch `compose-review` between tasks
+7. `compose-requesting-code-review` — dispatch `compose-review` between tasks
    (or every 3-5 tasks for large plans)
-7. `compose-finishing-a-development-branch` — merge / PR / cleanup decision
+8. `compose-finishing-a-development-branch` — merge / PR / cleanup decision
 
 ### Bug fix path
 
